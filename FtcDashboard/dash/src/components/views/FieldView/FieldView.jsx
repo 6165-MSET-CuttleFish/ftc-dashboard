@@ -47,6 +47,13 @@ class FieldView extends React.Component {
     }
   }
 
+
+  saveFieldToFile() {
+      if (this.field) {
+        this.field.saveFieldToFile('myFieldData.txt');
+      }
+    }
+
   render() {
     return (
       <BaseView isUnlocked={this.props.isUnlocked}>
