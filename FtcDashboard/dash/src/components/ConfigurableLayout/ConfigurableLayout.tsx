@@ -23,6 +23,7 @@ import TelemetryView from '@/components/views/TelemetryView';
 import CameraView from '@/components/views/CameraView';
 import OpModeView from '@/components/views/OpModeView';
 import LoggingView from '@/components/views/LoggingView/LoggingView';
+import LogcatView from '@/components/views/LogcatView';
 
 import RadialFab from './RadialFab/RadialFab';
 import RadialFabChild from './RadialFab/RadialFabChild';
@@ -61,7 +62,7 @@ function intervalsIntersect([a, b]: number[], [c, d]: number[]) {
 }
 
 const VIEW_MAP: { [key in ConfigurableView]: ReactElement } = {
-  [ConfigurableView.FIELD_VIEW]: <LogcatView />,
+  [ConfigurableView.LOGCAT_VIEW]: <LogcatView />,
   [ConfigurableView.FIELD_VIEW]: <FieldView />,
   [ConfigurableView.GRAPH_VIEW]: <GraphView />,
   [ConfigurableView.CONFIG_VIEW]: <ConfigView />,
