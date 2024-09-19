@@ -9,16 +9,16 @@ import BaseView, {
 } from './BaseView';
 import { RootState } from '@/store/reducers';
 
-type TelemetryViewProps = BaseViewProps & BaseViewHeadingProps;
+type LogcatViewProps = BaseViewProps & BaseViewHeadingProps;
 
-const TelemetryView = ({
+const LogcatView = ({
   isDraggable = false,
   isUnlocked = false,
-}: TelemetryViewProps) => {
+}: LogcatViewProps) => {
   const [log, setLog] = useState<string[]>([]);
   const [data, setData] = useState<{ [key: string]: string }>({});
 
-  const packets = useSelector((state: RootState) => state.logcat);
+  const packets = useSelector((state: RootState) => state.telemetry);
   useEffect(() => {
     if (packets.length === 0) {
       setLog([]);
@@ -45,14 +45,14 @@ const TelemetryView = ({
     );
   }, [packets]);
 
-  const telemetryLines = Object.keys(data).map((key) => (
+  const logcatLines = Object.keys(data).map((key) => (
     <span
       key={key}
       dangerouslySetInnerHTML={{ __html: `${key}: ${data[key]}<br />` }}
     />
   ));
 
-  const telemetryLog = log.map((line, i) => (
+  const logcatLog = log.map((line, i) => (
     <span key={i} dangerouslySetInnerHTML={{ __html: `${line}<br />` }} />
   ));
 
@@ -60,11 +60,11 @@ const TelemetryView = ({
     <BaseView isUnlocked={isUnlocked}>
       <BaseViewHeading isDraggable={isDraggable}>Logcat</BaseViewHeading>
       <BaseViewBody>
-        <p>{LogcatLines}</p>
-        <p>{LogcatLog}</p>
+        <p>{logcatLines}</p>
+        <p>{logcatLog}</p>
       </BaseViewBody>
     </BaseView>
   );
 };
 
-export default TelemetryView;
+export default LogcatView;

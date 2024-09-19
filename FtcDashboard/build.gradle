@@ -11,7 +11,7 @@ apply plugin: "maven-publish"
 apply plugin: "checkstyle"
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 34
 
     defaultConfig {
         minSdkVersion 23

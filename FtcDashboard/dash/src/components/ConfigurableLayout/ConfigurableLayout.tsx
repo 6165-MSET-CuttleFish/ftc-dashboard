@@ -61,6 +61,7 @@ function intervalsIntersect([a, b]: number[], [c, d]: number[]) {
 }
 
 const VIEW_MAP: { [key in ConfigurableView]: ReactElement } = {
+  [ConfigurableView.FIELD_VIEW]: <LogcatView />,
   [ConfigurableView.FIELD_VIEW]: <FieldView />,
   [ConfigurableView.GRAPH_VIEW]: <GraphView />,
   [ConfigurableView.CONFIG_VIEW]: <ConfigView />,
