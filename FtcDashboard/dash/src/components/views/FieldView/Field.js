@@ -64,7 +64,7 @@ function loadImage(src) {
 // all dimensions in this file are *CSS* pixels unless otherwise stated
 const DEFAULT_OPTIONS = {
   padding: 15,
-  fieldSize: 12 * 12, // inches
+  fieldSize: 12 * 12, // feet
   splineSamples: 250,
   gridLineWidth: 1, // device pixels
   gridLineColor: 'rgb(120, 120, 120)',
@@ -81,6 +81,30 @@ export default class Field {
     this.overlay = {
       ops: [],
     };
+    this.fileOutput = null;
+  }
+  getData(){
+    return(this.fileOutput);
+  }
+  saveToFile(filename) {
+    data = "PLEASE FRICKING WORK"; // this.fileOutput // also this.fileOutput doesnt work correctly it should add to a string not like overwrite but whatever
+
+    // Create a Blob with the data
+    const blob = new Blob([data], { type: 'text/plain' });
+
+    // Create an anchor element and set its href to the Blob URL
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+
+    // Programmatically click the anchor element to trigger the download
+    document.body.appendChild(a);
+    a.click();
+
+    // Cleanup
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   setOverlay(overlay) {
@@ -198,6 +222,9 @@ export default class Field {
           } else {
             this.ctx.fill();
           }
+
+          this.fileOutput = op;
+
           break;
         }
         case 'polyline': {
@@ -348,3 +375,4 @@ export default class Field {
     this.ctx.restore();
   }
 }
+
