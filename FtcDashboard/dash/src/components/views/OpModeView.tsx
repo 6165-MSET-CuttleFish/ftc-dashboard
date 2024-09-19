@@ -18,6 +18,9 @@ import { ReactComponent as GamepadNotSupportedIcon } from '@/assets/icons/gamepa
 import { STOP_OP_MODE_TAG } from '@/store/types/opmode';
 import ToolTip from '@/components/ToolTip';
 
+import Field from './FieldView/Field';
+
+
 type OpModeViewState = {
   selectedOpMode: string;
   shouldShowGamepadUnsupportedTooltip: boolean;
@@ -54,6 +57,8 @@ const ActionButton = ({
 );
 
 class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
+  private fieldRef: RefObject<Field>;
+
   gamepadUnsupportedTooltipRef: MutableRefObject<HTMLDivElement | null>;
   gamepadUnsupportedTooltipTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -67,6 +72,9 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
     this.gamepadUnsupportedTooltipRef = createRef();
 
     this.onChange = this.onChange.bind(this);
+
+    this.fieldRef = createRef<Field>(); // Create a ref for Field
+
   }
 
   gamepadIconsHover() {
@@ -88,6 +96,18 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
       shouldShowGamepadUnsupportedTooltip: false,
     }));
   }
+  //rice pls dont hate me
+  handleSaveToFile() {
+    if (!this.fieldRef.current) {
+      const fieldInstance = new Field(this.fieldRef.current);
+      this.fieldRef.current = fieldInstance;
+    }
+    if (this.fieldRef.current) {
+     this.fieldRef.current.saveToFile('myFieldData.txt');
+    }
+    this.props.stopOpMode();
+
+    }
 
   static getDerivedStateFromProps(
     props: OpModeViewProps,
@@ -159,6 +179,16 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
       </ActionButton>
     );
   }
+  renderRecordButton(){
+      return (
+          <ActionButton
+            className="border-yellow-200 bg-yellow-100 transition-colors"
+            onClick={() => this.handleSaveToFile()}
+          >
+        Save to File
+      </ActionButton>
+    );
+  }
 
   renderButtons() {
     const { activeOpMode, activeOpModeStatus, opModeList } = this.props;
@@ -175,7 +205,12 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
         </span>
       );
     } else if (activeOpModeStatus === OpModeStatus.RUNNING) {
-      return this.renderStopButton();
+      return (
+              <span>
+                {this.renderStopButton()}
+                {this.renderRecordButton()}
+              </span>
+            );
     } else if (activeOpModeStatus === OpModeStatus.STOPPED) {
       return null;
     } else {
@@ -262,7 +297,7 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
         <BaseViewBody>
           <select
             className={`
-              m-1 mr-2 rounded border border-gray-300 bg-gray-200 p-1 pr-6 
+              m-1 mr-2 rounded border border-gray-300 bg-gray-200 p-1 pr-6
               shadow-md transition focus:border-primary-500
               focus:ring-primary-500 disabled:text-gray-600 disabled:shadow-none
               dark:border-slate-500/80 dark:bg-slate-700 dark:text-slate-200
