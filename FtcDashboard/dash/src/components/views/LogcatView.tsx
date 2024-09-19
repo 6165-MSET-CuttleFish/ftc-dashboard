@@ -18,7 +18,7 @@ const TelemetryView = ({
   const [log, setLog] = useState<string[]>([]);
   const [data, setData] = useState<{ [key: string]: string }>({});
 
-  const packets = useSelector((state: RootState) => state.telemetry);
+  const packets = useSelector((state: RootState) => state.logcat);
   useEffect(() => {
     if (packets.length === 0) {
       setLog([]);
@@ -45,20 +45,12 @@ const TelemetryView = ({
     );
   }, [packets]);
 
-const telemetryLines = Object.keys(data).map((key) => {
-  // Check if the key contains the string "Log Entry "
-  if (key.includes("Log Entry ")) {
-    return (
-      <span
-        key={key}
-        dangerouslySetInnerHTML={{ __html: `${key}: ${data[key]}<br />` }}
-      />
-    );
-  }
-
-  // Return null or an empty element if the condition is not met
-  return null;
-});
+  const telemetryLines = Object.keys(data).map((key) => (
+    <span
+      key={key}
+      dangerouslySetInnerHTML={{ __html: `${key}: ${data[key]}<br />` }}
+    />
+  ));
 
   const telemetryLog = log.map((line, i) => (
     <span key={i} dangerouslySetInnerHTML={{ __html: `${line}<br />` }} />
@@ -66,10 +58,10 @@ const telemetryLines = Object.keys(data).map((key) => {
 
   return (
     <BaseView isUnlocked={isUnlocked}>
-      <BaseViewHeading isDraggable={isDraggable}>Telemetry</BaseViewHeading>
+      <BaseViewHeading isDraggable={isDraggable}>Logcat</BaseViewHeading>
       <BaseViewBody>
-        <p>{telemetryLines}</p>
-        <p>{telemetryLog}</p>
+        <p>{LogcatLines}</p>
+        <p>{LogcatLog}</p>
       </BaseViewBody>
     </BaseView>
   );
