@@ -40,8 +40,11 @@ import com.qualcomm.robotcore.util.WebServer;
 import dalvik.system.DexFile;
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoWSD;
+
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -84,6 +87,9 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
     private static final String PREFS_AUTO_ENABLE_KEY = "autoEnable";
 
     private static FtcDashboard instance;
+    private Process logcatProcess;
+    private BufferedReader bufferedReader;
+    private List<String> logEntries;
 
     @OpModeRegistrar
     public static void registerOpMode(OpModeManager manager) {
@@ -180,6 +186,8 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
             return new DashWebSocket(handshake);
         }
     };
+
+
 
     private SharedPreferences prefs;
     private final List<MenuItem> enableMenuItems;
@@ -648,6 +656,8 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
     }
 
     private FtcDashboard() {
+        startLogcatCapture();
+        startLogThread();
         core.withConfigRoot(new CustomVariableConsumer() {
             @Override
             public void accept(CustomVariable configRoot) {
@@ -1225,6 +1235,7 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
             opModeManager.unregisterListener(this);
         }
         disable();
+        stopLogcatCapture();
 
         removeStatusView();
     }
@@ -1281,4 +1292,62 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
 
         stopCameraStream();
     }
+    private void startLogcatCapture() {
+        try {
+            String[] cmd = {"logcat", "*:W", "*:I", "*:D", "*:V"};
+            logcatProcess = Runtime.getRuntime().exec(cmd);
+            bufferedReader = new BufferedReader(new InputStreamReader(logcatProcess.getInputStream()));
+            logEntries = new ArrayList<>();
+        } catch (IOException e) {
+            Log.w(TAG, "Failed to start Logcat capture: " + e.getMessage());
+        }
+    }
+    private void stopLogcatCapture() {
+        if (logcatProcess != null) {
+            logcatProcess.destroy();
+            logcatProcess = null;
+        }
+    }
+    private void sendLogsToDashboard(List<String> logs) {
+        TelemetryPacket packet = new TelemetryPacket();
+        packet.put("logcat-status", "capturing");
+
+        for (int i = 0; i < logs.size(); i++) {
+            packet.put("Log Entry " + i, logs.get(i));
+        }
+
+        sendTelemetryPacket(packet);
+    }
+    private void startLogThread() {
+        Thread logThread = new Thread(() -> {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    while (bufferedReader != null && bufferedReader.ready()) {
+                        String logEntry = bufferedReader.readLine();
+                        if (logEntry != null && logEntry.contains("RobotCore")) {
+                            logEntries.add(logEntry);
+                        }
+                    }
+
+                    if (!logEntries.isEmpty()) {
+                        sendLogsToDashboard(logEntries);
+                        logEntries.clear();
+                    }
+                } catch (IOException e) {
+                    Log.w(TAG, "Error reading logcat: " + e.getMessage());
+                }
+
+                try {
+                    Thread.sleep(100); // Adjust delay as needed
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        logThread.start();
+    }
+
+
+
+
 }
