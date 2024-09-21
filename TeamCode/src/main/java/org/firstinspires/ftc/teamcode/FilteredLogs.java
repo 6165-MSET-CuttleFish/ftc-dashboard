@@ -65,17 +65,18 @@ public class FilteredLogs extends LinearOpMode {
     private void stopLogcatCapture() {
         if (logcatProcess != null) {
             logcatProcess.destroy();
+            logcatProcess = null;
         }
     }
 
     private void sendLogsToDashboard(List<String> logs) {
         TelemetryPacket packet = new TelemetryPacket();
         packet.put("normal tele", "test");
-        for (int i = 0; i < logs.size(); i++) {
 
+        for (int i = 0; i < logs.size(); i++) {
             packet.put("Log Entry " + i, logs.get(i));
-            dashboard.sendTelemetryPacket(packet);
         }
+
         dashboard.sendTelemetryPacket(packet);
 
         for (int i = 0; i < logs.size(); i++) {
