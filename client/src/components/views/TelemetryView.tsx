@@ -45,12 +45,20 @@ const TelemetryView = ({
     );
   }, [packets]);
 
-  const telemetryLines = Object.keys(data).map((key) => (
-    <span
-      key={key}
-      dangerouslySetInnerHTML={{ __html: `${key}: ${data[key]}<br />` }}
-    />
-  ));
+const telemetryLines = Object.keys(data).map((key) => {
+  // Check if the key contains the string "Log Entry "
+  if (!key.includes("Log Entry ")) {
+    return (
+      <span
+        key={key}
+        dangerouslySetInnerHTML={{ __html: `${key}: ${data[key]}<br />` }}
+      />
+    );
+  }
+
+  // Return null or an empty element if the condition is not met
+  return null;
+});
 
   const telemetryLog = log.map((line, i) => (
     <span key={i} dangerouslySetInnerHTML={{ __html: `${line}<br />` }} />

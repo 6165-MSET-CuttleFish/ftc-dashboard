@@ -45,7 +45,7 @@ const LogcatView = ({
     );
   }, [packets]);
 
-const LogcatLines = Object.keys(data).map((key) => {
+const logcatLines = Object.keys(data).map((key) => {
   // Check if the key contains the string "Log Entry "
   if (key.includes("Log Entry ")) {
     return (
