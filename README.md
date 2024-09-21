@@ -22,14 +22,14 @@ Check out our [online documentation](https://acmerobotics.github.io/ftc-dashboar
 
 1. Open [`build.dependencies.gradle`](https://github.com/FIRST-Tech-Challenge/FtcRobotController/blob/master/build.dependencies.gradle)
 2. In the `repositories` section, add `maven { url = 'https://maven.brott.dev/' }`
-3. In the `dependencies` section, add `implementation 'com.acmerobotics.dashboard:dashboard:0.4.15'`
+3. In the `dependencies` section, add `implementation 'com.acmerobotics.dashboard:dashboard:0.4.16'`
 
     Please see [GitHub releases page](https://github.com/acmerobotics/ftc-dashboard/releases) for the latest version number
 
 4. If you’re using OpenRC or have non-standard SDK dependencies, add the following exclusion:
 
     ```
-    implementation('com.acmerobotics.dashboard:dashboard:0.4.15') {
+    implementation('com.acmerobotics.dashboard:dashboard:0.4.16') {
       exclude group: 'org.firstinspires.ftc'
     }
     ```
@@ -49,7 +49,7 @@ Check out our [online documentation](https://acmerobotics.github.io/ftc-dashboar
    - Not explicitly required and provides little advantage over modern `npm` (as of the time of writing)
    - Further instructions will however reference `yarn` over `npm` for historical reasons
 
-3. Browser FTC Dashboard client is located in `FtcDashboard/dash`
+3. Browser FTC Dashboard client is located in `client`
 
 4. Run `yarn` (alternatively `npm install`) to install dependencies
 
@@ -94,7 +94,7 @@ Dashboard's server is split into two packages, `DashboardCore` and `FtcDashboard
 
 Primary interface as a web-client acessible to the end-user through a web browser
 
-- Located in [`FtcDashboard/dash`](https://github.com/acmerobotics/ftc-dashboard/tree/master/FtcDashboard/dash)
+- Located in [`client`](https://github.com/acmerobotics/ftc-dashboard/tree/master/client)
 - Installation and run instructions mentioned above
 - TypeScript + React application
 - Vite for builds
@@ -102,17 +102,17 @@ Primary interface as a web-client acessible to the end-user through a web browse
 
 ### Relevant files
 
-- [Dashboard.tsx](https://github.com/acmerobotics/ftc-dashboard/blob/master/FtcDashboard/dash/src/components/Dashboard/Dashboard.tsx)
+- [Dashboard.tsx](https://github.com/acmerobotics/ftc-dashboard/blob/master/client/src/components/Dashboard/Dashboard.tsx)
   - Primary functional entrypoint
-- [LayoutPreset.tsx](https://github.com/acmerobotics/ftc-dashboard/blob/master/FtcDashboard/dash/src/enums/LayoutPreset.tsx)
+- [LayoutPreset.tsx](https://github.com/acmerobotics/ftc-dashboard/blob/master/client/src/enums/LayoutPreset.tsx)
   - Contains preset layouts
-- [`views/`](https://github.com/acmerobotics/ftc-dashboard/tree/master/FtcDashboard/dash/src/components/views)
+- [`views/`](https://github.com/acmerobotics/ftc-dashboard/tree/master/client/src/components/views)
   - Contains the various views that can be displayed on the dashboard
     - Graphs
     - Telemetry
     - Gamepad
     - etc
-- [`store/`](https://github.com/acmerobotics/ftc-dashboard/tree/master/FtcDashboard/dash/src/store)
+- [`store/`](https://github.com/acmerobotics/ftc-dashboard/tree/master/client/src/store)
   - Contains shared state management logic
     - Web Socket connection
     - Gamepad state management
