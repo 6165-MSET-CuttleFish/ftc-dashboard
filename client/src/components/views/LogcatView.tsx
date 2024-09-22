@@ -68,8 +68,8 @@ const logcatLines = Object.keys(data).map((key) => {
     <BaseView isUnlocked={isUnlocked}>
       <BaseViewHeading isDraggable={isDraggable}>Logcat</BaseViewHeading>
       <BaseViewBody>
-        <p>{logcatLines}</p>
-        <p>{logcatLog}</p>
+        <p style={{ color: 'red' }}>{logcatLines}</p>
+        <p style={{ color: 'red' }}>{logcatLog}</p>
       </BaseViewBody>
     </BaseView>
   );
