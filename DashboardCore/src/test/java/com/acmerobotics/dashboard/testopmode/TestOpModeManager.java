@@ -1,15 +1,12 @@
 package com.acmerobotics.dashboard.testopmode;
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+
 import com.acmerobotics.dashboard.OrbitOpMode;
-=======
+
 import com.acmerobotics.dashboard.Orbit;
->>>>>>> Stashed changes
-=======
+
 import com.acmerobotics.dashboard.Orbit2;
 import com.acmerobotics.dashboard.Orbit3;
->>>>>>> Stashed changes
 import com.acmerobotics.dashboard.SendFun;
 import com.acmerobotics.dashboard.Orbit;
 import com.acmerobotics.dashboard.TestFieldVersatilityOpMode;
@@ -19,16 +16,8 @@ import java.util.Arrays;
 import java.util.List;
 
 public class TestOpModeManager {
-    private final List<TestOpMode> testOpModes =
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-        Arrays.asList(new TestSineWaveOpMode(), new TestFieldVersatilityOpMode(), new OrbitOpMode());
-=======
-        Arrays.asList(new TestSineWaveOpMode(), new TestFieldVersatilityOpMode(), new Orbit());
->>>>>>> Stashed changes
-=======
-        Arrays.asList(new TestSineWaveOpMode(), new TestFieldVersatilityOpMode(), new Orbit(), new Orbit2(), new Orbit3());
->>>>>>> Stashed changes
+    private final List<TestOpMode> testOpModes = Arrays.asList(new TestSineWaveOpMode(), new TestFieldVersatilityOpMode(), new Orbit(), new Orbit2(), new Orbit3());
+
     private TestOpMode activeOpMode = null;
 
     SendFun sendFun;

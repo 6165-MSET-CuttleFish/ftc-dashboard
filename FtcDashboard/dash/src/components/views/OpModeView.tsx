@@ -1,5 +1,6 @@
 import { Component, ChangeEvent, createRef, MutableRefObject } from 'react';
 import { connect, ConnectedProps } from 'react-redux';
+import React from 'react';
 
 import { RootState } from '@/store/reducers';
 import { initOpMode, startOpMode, stopOpMode } from '@/store/actions/opmode';
@@ -17,6 +18,9 @@ import { ReactComponent as GamepadIcon } from '@/assets/icons/gamepad.svg';
 import { ReactComponent as GamepadNotSupportedIcon } from '@/assets/icons/gamepad_not_supported.svg';
 import { STOP_OP_MODE_TAG } from '@/store/types/opmode';
 import ToolTip from '@/components/ToolTip';
+
+// Ensure FieldView is imported
+import FieldView from './FieldView/FieldView';
 
 type OpModeViewState = {
   selectedOpMode: string;
@@ -64,10 +68,12 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
       selectedOpMode: '',
       shouldShowGamepadUnsupportedTooltip: false,
     };
+
     this.gamepadUnsupportedTooltipRef = createRef();
 
     this.onChange = this.onChange.bind(this);
   }
+
 
   gamepadIconsHover() {
     let myTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -88,6 +94,7 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
       shouldShowGamepadUnsupportedTooltip: false,
     }));
   }
+
 
   static getDerivedStateFromProps(
     props: OpModeViewProps,
@@ -160,6 +167,7 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
     );
   }
 
+
   renderButtons() {
     const { activeOpMode, activeOpModeStatus, opModeList } = this.props;
 
@@ -175,7 +183,11 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
         </span>
       );
     } else if (activeOpModeStatus === OpModeStatus.RUNNING) {
-      return this.renderStopButton();
+      return (
+              <span>
+                {this.renderStopButton()}
+              </span>
+            );
     } else if (activeOpModeStatus === OpModeStatus.STOPPED) {
       return null;
     } else {
@@ -262,7 +274,7 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
         <BaseViewBody>
           <select
             className={`
-              m-1 mr-2 rounded border border-gray-300 bg-gray-200 p-1 pr-6 
+              m-1 mr-2 rounded border border-gray-300 bg-gray-200 p-1 pr-6
               shadow-md transition focus:border-primary-500
               focus:ring-primary-500 disabled:text-gray-600 disabled:shadow-none
               dark:border-slate-500/80 dark:bg-slate-700 dark:text-slate-200
