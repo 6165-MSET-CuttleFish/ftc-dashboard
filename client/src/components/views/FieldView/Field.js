@@ -164,10 +164,12 @@ export default class Field {
     filename = "field_replay_" + formattedDate + "_" + formattedTime;
 
 
-    const data = this.getData(); // this.fileOutput // also this.fileOutput doesnt work correctly it should add to a string not like overwrite but whatever
+    const data = ""+this.getData(); // this.fileOutput // also this.fileOutput doesnt work correctly it should add to a string not like overwrite but whatever
     let newData = "";
-    let initialTime = parseInt(data.split("\n")[0].split('@')[0]);
-    console.error(initialTime);
+    let initialTime = data.split("\n")[0];
+    initialTime = initialTime.split('@')[0];
+    initialTime = parseInt(initialTime);
+    // console.error(initialTime);
     data.split("\n").forEach((line, index) => {
 
         const timestamp = parseInt(line.split('@')[0]);
@@ -231,7 +233,7 @@ export default class Field {
     }
     if (this.startTime && (time - this.startTime.getTime())>0) {
         elapsedTime = time - this.startTime.getTime(); // Difference in milliseconds
-        console.error(elapsedTime);
+        //console.error(elapsedTime);
     } else {
         this.startTime = new Date();
     }
@@ -341,9 +343,6 @@ export default class Field {
           } else {
             this.ctx.fill();
           }
-
-          this.fileOutput = op;
-
           break;
         }
         case 'polyline': {

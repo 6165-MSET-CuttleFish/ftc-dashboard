@@ -1294,7 +1294,7 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
     }
     private void startLogcatCapture() {
         try {
-            String[] cmd = {"logcat", "*:W", "*:I", "*:D", "*:V"};
+            String[] cmd = {"logcat", "*:E"};
             logcatProcess = Runtime.getRuntime().exec(cmd);
             bufferedReader = new BufferedReader(new InputStreamReader(logcatProcess.getInputStream()));
             logEntries = new ArrayList<>();
@@ -1324,7 +1324,7 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
                 try {
                     while (bufferedReader != null && bufferedReader.ready()) {
                         String logEntry = bufferedReader.readLine();
-                        if (logEntry != null && logEntry.contains("RobotCore")) {
+                        if (logEntry != null && logEntry.contains("OpModeManager")) {
                             logEntries.add(logEntry);
                         }
                     }

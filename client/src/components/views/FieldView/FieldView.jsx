@@ -77,7 +77,7 @@ class FieldView extends React.Component {
           <AutoFitCanvas
             ref={this.canvasRef}
             onResize={this.renderField}
-            containerHeight="calc(100% - 3em)"
+            containerHeight="calc(200% - 3em)"
           />
 
           {/* File Selector */}
