@@ -1,5 +1,6 @@
 import { Component, ChangeEvent, createRef, MutableRefObject } from 'react';
 import { connect, ConnectedProps } from 'react-redux';
+import React from 'react';
 
 import { RootState } from '@/store/reducers';
 import { initOpMode, startOpMode, stopOpMode } from '@/store/actions/opmode';
@@ -17,9 +18,6 @@ import { ReactComponent as GamepadIcon } from '@/assets/icons/gamepad.svg';
 import { ReactComponent as GamepadNotSupportedIcon } from '@/assets/icons/gamepad_not_supported.svg';
 import { STOP_OP_MODE_TAG } from '@/store/types/opmode';
 import ToolTip from '@/components/ToolTip';
-
-import Field from './FieldView/Field';
-
 
 type OpModeViewState = {
   selectedOpMode: string;
@@ -69,6 +67,7 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
       selectedOpMode: '',
       shouldShowGamepadUnsupportedTooltip: false,
     };
+
     this.gamepadUnsupportedTooltipRef = createRef();
 
     this.onChange = this.onChange.bind(this);
@@ -76,6 +75,7 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
     this.fieldRef = createRef<Field>(); // Create a ref for Field
 
   }
+
 
   gamepadIconsHover() {
     let myTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -108,6 +108,7 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
     this.props.stopOpMode();
 
     }
+
 
   static getDerivedStateFromProps(
     props: OpModeViewProps,
@@ -190,6 +191,7 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
     );
   }
 
+
   renderButtons() {
     const { activeOpMode, activeOpModeStatus, opModeList } = this.props;
 
@@ -208,7 +210,6 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
       return (
               <span>
                 {this.renderStopButton()}
-                {this.renderRecordButton()}
               </span>
             );
     } else if (activeOpModeStatus === OpModeStatus.STOPPED) {

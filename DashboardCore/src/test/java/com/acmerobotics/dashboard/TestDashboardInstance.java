@@ -136,6 +136,60 @@ public class TestDashboardInstance {
 
         core.enabled = true;
 
+
+        core.addConfigVariable("Orbit", "ORBITAL_FREQUENCY", new ValueProvider<Double>() {
+            private double xq = 0.05;
+
+            @Override
+            public Double get() {
+                return xq;
+            }
+
+            @Override
+            public void set(Double value) {
+                xq = value;
+            }
+        });
+        core.addConfigVariable("Orbit", "SPIN_FREQUENCY", new ValueProvider<Double>() {
+            private double xw = 0.25;
+
+            @Override
+            public Double get() {
+                return xw;
+            }
+
+            @Override
+            public void set(Double value) {
+                xw = value;
+            }
+        });
+        core.addConfigVariable("Orbit", "ORBITAL_RADIUS", new ValueProvider<Integer>() {
+            private int xe = 50;
+
+            @Override
+            public Integer get() {
+                return xe;
+            }
+
+            @Override
+            public void set(Integer value) {
+                xe = value;
+            }
+        });
+        core.addConfigVariable("Orbit", "SIDE_LENGTH", new ValueProvider<Integer>() {
+            private int xr = 10;
+
+            @Override
+            public Integer get() {
+                return xr;
+            }
+
+            @Override
+            public void set(Integer value) {
+                xr = value;
+            }
+        });
+
         core.addConfigVariable("Test", "LATERAL_MULTIPLIER", new ValueProvider<Double>() {
             private double x;
 
