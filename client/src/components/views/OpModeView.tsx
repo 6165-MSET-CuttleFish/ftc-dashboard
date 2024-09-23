@@ -55,8 +55,6 @@ const ActionButton = ({
 );
 
 class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
-  private fieldRef: RefObject<Field>;
-
   gamepadUnsupportedTooltipRef: MutableRefObject<HTMLDivElement | null>;
   gamepadUnsupportedTooltipTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -71,9 +69,6 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
     this.gamepadUnsupportedTooltipRef = createRef();
 
     this.onChange = this.onChange.bind(this);
-
-    this.fieldRef = createRef<Field>(); // Create a ref for Field
-
   }
 
 
@@ -96,19 +91,6 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
       shouldShowGamepadUnsupportedTooltip: false,
     }));
   }
-  //rice pls dont hate me
-  handleSaveToFile() {
-    if (!this.fieldRef.current) {
-      const fieldInstance = new Field(this.fieldRef.current);
-      this.fieldRef.current = fieldInstance;
-    }
-    if (this.fieldRef.current) {
-     this.fieldRef.current.saveToFile('myFieldData.txt');
-    }
-    this.props.stopOpMode();
-
-    }
-
 
   static getDerivedStateFromProps(
     props: OpModeViewProps,
@@ -180,17 +162,6 @@ class OpModeView extends Component<OpModeViewProps, OpModeViewState> {
       </ActionButton>
     );
   }
-  renderRecordButton(){
-      return (
-          <ActionButton
-            className="border-yellow-200 bg-yellow-100 transition-colors"
-            onClick={() => this.handleSaveToFile()}
-          >
-        Save to File
-      </ActionButton>
-    );
-  }
-
 
   renderButtons() {
     const { activeOpMode, activeOpModeStatus, opModeList } = this.props;
