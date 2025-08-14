@@ -4,8 +4,10 @@ import BaseView, {
   BaseViewBody,
   BaseViewIcons,
   BaseViewIconButton,
-} from 'client/src/assets/icons'; // Adjust path as needed
-import { Play, Square, Keyboard }; // Assuming you have these icons
+} from '@/components/views/BaseView'; // Adjust path as needed
+import { ReactComponent as Play } from '@/assets/icons/widgets.svg';
+import { ReactComponent as Square } from '@/assets/icons/list.svg';
+import { ReactComponent as Keyboard } from '@/assets/icons/list.svg';
 
 interface KeyboardState {
   w: boolean;
@@ -83,7 +85,7 @@ const KeyboardView: React.FC<KeyboardViewProps> = ({
   // Handle key press
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (!isEnabled) return;
-    
+
     const mappedKey = keyMap[event.key];
     if (mappedKey) {
       event.preventDefault();
@@ -98,7 +100,7 @@ const KeyboardView: React.FC<KeyboardViewProps> = ({
   // Handle key release
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
     if (!isEnabled) return;
-    
+
     const mappedKey = keyMap[event.key];
     if (mappedKey) {
       event.preventDefault();
@@ -150,8 +152,8 @@ const KeyboardView: React.FC<KeyboardViewProps> = ({
         flex items-center justify-center
         w-12 h-12 rounded border-2 text-sm font-medium
         transition-all duration-150
-        ${isActive 
-          ? 'bg-blue-500 border-blue-600 text-white shadow-lg' 
+        ${isActive
+          ? 'bg-blue-500 border-blue-600 text-white shadow-lg'
           : 'bg-gray-100 border-gray-300 text-gray-700 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300'
         }
       `}
@@ -169,7 +171,7 @@ const KeyboardView: React.FC<KeyboardViewProps> = ({
             <span>Keyboard Emulator</span>
           </div>
         </BaseViewHeading>
-        
+
         <BaseViewIcons>
           <BaseViewIconButton
             onClick={toggleKeyboard}
