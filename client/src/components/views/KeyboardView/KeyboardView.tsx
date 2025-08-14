@@ -167,7 +167,7 @@ const KeyboardView: React.FC<KeyboardViewProps> = ({
       <div className="flex items-center justify-between">
         <BaseViewHeading isDraggable={isUnlocked}>
           <div className="flex items-center space-x-2">
-            <Keyboard size={20} />
+            <Keyboard />
             <span>Keyboard Emulator</span>
           </div>
         </BaseViewHeading>
@@ -182,7 +182,7 @@ const KeyboardView: React.FC<KeyboardViewProps> = ({
             }`}
             title={isEnabled ? 'Stop Keyboard Emulator' : 'Start Keyboard Emulator'}
           >
-            {isEnabled ? <Square size={18} /> : <Play size={18} />}
+            {isEnabled ? <Square /> : <Play />}
           </BaseViewIconButton>
         </BaseViewIcons>
       </div>
