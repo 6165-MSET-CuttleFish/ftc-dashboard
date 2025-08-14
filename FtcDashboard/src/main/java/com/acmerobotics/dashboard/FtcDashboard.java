@@ -20,6 +20,7 @@ import com.acmerobotics.dashboard.config.variable.CustomVariable;
 import com.acmerobotics.dashboard.message.Message;
 import com.acmerobotics.dashboard.message.redux.InitOpMode;
 import com.acmerobotics.dashboard.message.redux.ReceiveGamepadState;
+import com.acmerobotics.dashboard.message.redux.ReceiveKeyboardState;
 import com.acmerobotics.dashboard.message.redux.ReceiveHardwareConfigList;
 import com.acmerobotics.dashboard.message.redux.ReceiveImage;
 import com.acmerobotics.dashboard.message.redux.ReceiveOpModeList;
@@ -93,12 +94,20 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
     private static final String TAG = "FtcDashboard";
 
     private static final int DEFAULT_IMAGE_QUALITY = 50; // 0-100
-    private static final int GAMEPAD_WATCHDOG_INTERVAL = 500; // ms
+    private static final int GAMEPAD_WATCHDOG_INTERVAL = 500;
+    private static final int KEYBOARD_WATCHDOG_INTERVAL = 500;// ms
 
     private static boolean suppressOpMode = false;
 
     private static final String PREFS_NAME = "FtcDashboard";
     private static final String PREFS_AUTO_ENABLE_KEY = "autoEnable";
+
+    private static final String KEYBOARD_EMULATOR_PREF_KEY = "keyboardEmulatorEnabled";
+    private boolean keyboardEmulatorEnabled = false;
+    private final Mutex<KeyboardState> currentKeyboardState = new Mutex<>(new KeyboardState());
+
+    private ExecutorService keyboardWatchdogExecutor;
+    private long lastKeyboardTimestamp;
 
     private static FtcDashboard instance;
 
@@ -220,6 +229,7 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
     private ExecutorService gamepadWatchdogExecutor;
     private long lastGamepadTimestamp;
 
+
     private boolean webServerAttached;
 
     private TextView connectionStatusTextView;
@@ -250,6 +260,38 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
                     } else {
                         Thread.sleep(GAMEPAD_WATCHDOG_INTERVAL
                             - (timestamp - lastGamepadTimestamp));
+                    }
+                } catch (InterruptedException e) {
+                    break;
+                }
+            }
+        }
+    }
+
+    private class KeyboardWatchdogRunnable implements Runnable {
+        @Override
+        public void run() {
+            while (!Thread.currentThread().isInterrupted()) {
+                long timestamp = System.currentTimeMillis();
+                try {
+                    if (lastKeyboardTimestamp == 0) {
+                        Thread.sleep(KEYBOARD_WATCHDOG_INTERVAL);
+                    } else if ((timestamp - lastKeyboardTimestamp) > KEYBOARD_WATCHDOG_INTERVAL) {
+                        // Reset keyboard state if no input received for too long
+                        currentKeyboardState.with(state -> {
+                            state.clear(); // Reset all keys to false
+                        });
+                        // Also clear the resulting gamepad inputs
+                        activeOpMode.with(o -> {
+                            if (keyboardEmulatorEnabled && o.status == RobotStatus.OpModeStatus.RUNNING) {
+                                o.opMode.gamepad1.copy(new Gamepad());
+                                o.opMode.gamepad2.copy(new Gamepad());
+                            }
+                        });
+                        lastKeyboardTimestamp = 0;
+                    } else {
+                        Thread.sleep(KEYBOARD_WATCHDOG_INTERVAL
+                                - (timestamp - lastKeyboardTimestamp));
                     }
                 } catch (InterruptedException e) {
                     break;
@@ -828,6 +870,11 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
                     updateGamepads(castMsg.getGamepad1(), castMsg.getGamepad2());
                     break;
                 }
+                case RECEIVE_KEYBOARD_STATE: {
+                    ReceiveKeyboardState castMsg = (ReceiveKeyboardState) msg;
+                    updateGamepadsFromKeyboard(castMsg.getKeyboardState());
+                    break;
+                }
                 case SET_HARDWARE_CONFIG: {
                     String hardwareConfigName = ((SetHardwareConfig) msg).getHardwareConfigName();
 
@@ -919,6 +966,7 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
         prefs.edit()
             .putBoolean(PREFS_AUTO_ENABLE_KEY, autoEnable)
             .apply();
+        keyboardEmulatorEnabled = prefs.getBoolean(KEYBOARD_EMULATOR_PREF_KEY, false);
     }
 
     private void enable() {
@@ -931,9 +979,27 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
         gamepadWatchdogExecutor = ThreadPool.newSingleThreadExecutor("gamepad watchdog");
         gamepadWatchdogExecutor.submit(new GamepadWatchdogRunnable());
 
+        if (keyboardEmulatorEnabled) {
+            keyboardWatchdogExecutor = ThreadPool.newSingleThreadExecutor("keyboard watchdog");
+            keyboardWatchdogExecutor.submit(new KeyboardWatchdogRunnable());
+        }
+
         core.enabled = true;
 
         updateStatusView();
+    }
+    private static class KeyboardState {
+        public boolean w = false, a = false, s = false, d = false;
+        public boolean space = false, shift = false, ctrl = false;
+        public boolean up = false, down = false, left = false, right = false;
+        public boolean q = false, e = false, r = false, f = false;
+
+        public void clear() {
+            w = a = s = d = false;
+            space = shift = ctrl = false;
+            up = down = left = right = false;
+            q = e = r = f = false;
+        }
     }
 
     private void disable() {
@@ -944,6 +1010,10 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
         setAutoEnable(false);
 
         gamepadWatchdogExecutor.shutdownNow();
+
+        if (keyboardWatchdogExecutor != null) {
+            keyboardWatchdogExecutor.shutdownNow();
+        }
 
         stopCameraStream();
 
@@ -1457,6 +1527,118 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
             lastGamepadTimestamp = System.currentTimeMillis();
         });
     }
+
+    public static void mapKeyboardToGamepad(KeyboardState keyboardState, ReceiveGamepadState.Gamepad gamepad1, ReceiveGamepadState.Gamepad gamepad2) {
+        clearGamepad(gamepad1);
+        clearGamepad(gamepad2);
+
+        gamepad1.left_stick_y = keyboardState.w ? -1.0f : (keyboardState.s ? 1.0f : 0.0f);
+        gamepad1.left_stick_x = keyboardState.d ? 1.0f : (keyboardState.a ? -1.0f : 0.0f);
+
+        gamepad1.right_stick_y = keyboardState.up ? -1.0f : (keyboardState.down ? 1.0f : 0.0f);
+        gamepad1.right_stick_x = keyboardState.right ? 1.0f : (keyboardState.left ? -1.0f : 0.0f);
+
+        gamepad1.a = keyboardState.space;
+        gamepad1.b = keyboardState.shift;
+        gamepad1.x = keyboardState.q;
+        gamepad1.y = keyboardState.e;
+
+        gamepad1.left_bumper = keyboardState.r;
+        gamepad1.right_bumper = keyboardState.f;
+        gamepad1.left_trigger = keyboardState.ctrl ? 1.0f : 0.0f;
+    }
+
+    private static void clearGamepad(ReceiveGamepadState.Gamepad gamepad) {
+        gamepad.left_stick_x = 0.0f;
+        gamepad.left_stick_y = 0.0f;
+        gamepad.right_stick_x = 0.0f;
+        gamepad.right_stick_y = 0.0f;
+
+        gamepad.dpad_up = false;
+        gamepad.dpad_down = false;
+        gamepad.dpad_left = false;
+        gamepad.dpad_right = false;
+
+        gamepad.a = false;
+        gamepad.b = false;
+        gamepad.x = false;
+        gamepad.y = false;
+
+        gamepad.guide = false;
+        gamepad.start = false;
+        gamepad.back = false;
+
+        gamepad.left_bumper = false;
+        gamepad.right_bumper = false;
+
+        gamepad.left_stick_button = false;
+        gamepad.right_stick_button = false;
+
+        gamepad.left_trigger = 0.0f;
+        gamepad.right_trigger = 0.0f;
+
+        gamepad.touchpad = false;
+    }
+
+    private void updateGamepadsFromKeyboard(ReceiveKeyboardState.KeyboardState keyboardState) {
+        if (!keyboardEmulatorEnabled) {
+            return;
+        }
+
+        currentKeyboardState.with(state -> {
+            copyKeyboardState(keyboardState, state);
+
+            ReceiveGamepadState.Gamepad gamepad1 = new ReceiveGamepadState.Gamepad();
+            ReceiveGamepadState.Gamepad gamepad2 = new ReceiveGamepadState.Gamepad();
+
+            mapKeyboardToGamepad(state, gamepad1, gamepad2);
+
+            updateGamepads(gamepad1, gamepad2);
+
+            lastKeyboardTimestamp = System.currentTimeMillis();
+        });
+    }
+
+    private void copyKeyboardState(ReceiveKeyboardState.KeyboardState src, KeyboardState dst) {
+        dst.w = src.w;
+        dst.a = src.a;
+        dst.s = src.s;
+        dst.d = src.d;
+        dst.space = src.space;
+        dst.shift = src.shift;
+        dst.ctrl = src.ctrl;
+        dst.up = src.up;
+        dst.down = src.down;
+        dst.left = src.left;
+        dst.right = src.right;
+        dst.q = src.q;
+        dst.e = src.e;
+        dst.r = src.r;
+        dst.f = src.f;
+    }
+
+
+    public void enableKeyboardEmulator() {
+        keyboardEmulatorEnabled = true;
+        prefs.edit().putBoolean(KEYBOARD_EMULATOR_PREF_KEY, true).apply();
+
+        if (core.enabled && keyboardWatchdogExecutor == null) {
+            keyboardWatchdogExecutor = ThreadPool.newSingleThreadExecutor("keyboard watchdog");
+            keyboardWatchdogExecutor.submit(new KeyboardWatchdogRunnable());
+        }
+    }
+
+    public void disableKeyboardEmulator() {
+        keyboardEmulatorEnabled = false;
+        prefs.edit().putBoolean(KEYBOARD_EMULATOR_PREF_KEY, false).apply();
+
+        if (keyboardWatchdogExecutor != null) {
+            keyboardWatchdogExecutor.shutdownNow();
+            keyboardWatchdogExecutor = null;
+        }
+        currentKeyboardState.with((Mutex.Fun<KeyboardState, Object>) state -> state);
+    }
+
 
     private RobotStatus getRobotStatus() {
         if (opModeManager == null) {

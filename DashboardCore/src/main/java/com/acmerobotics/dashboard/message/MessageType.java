@@ -7,6 +7,7 @@ import com.acmerobotics.dashboard.message.redux.ReceiveConfig;
 import com.acmerobotics.dashboard.message.redux.ReceiveGamepadState;
 import com.acmerobotics.dashboard.message.redux.ReceiveHardwareConfigList;
 import com.acmerobotics.dashboard.message.redux.ReceiveImage;
+import com.acmerobotics.dashboard.message.redux.ReceiveKeyboardState;
 import com.acmerobotics.dashboard.message.redux.ReceiveOpModeList;
 import com.acmerobotics.dashboard.message.redux.ReceiveRobotStatus;
 import com.acmerobotics.dashboard.message.redux.ReceiveTelemetry;
@@ -42,6 +43,7 @@ public enum MessageType {
 
     /* gamepad */
     RECEIVE_GAMEPAD_STATE(ReceiveGamepadState.class),
+    RECEIVE_KEYBOARD_STATE(ReceiveKeyboardState.class),
 
     /* hardware config */
     RECEIVE_HARDWARE_CONFIG_LIST(ReceiveHardwareConfigList.class),
