@@ -8,4 +8,5 @@ export enum ConfigurableView {
   OPMODE_VIEW,
   LOGGING_VIEW,
   HARDWARE_CONFIG_VIEW,
+  KEYBOARD_VIEW,
 }

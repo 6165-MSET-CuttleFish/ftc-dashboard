@@ -10,6 +10,7 @@ import { ReactComponent as ApiIcon } from '@/assets/icons/api.svg';
 import { ReactComponent as SubjectIcon } from '@/assets/icons/subject.svg';
 import { ReactComponent as WidgetIcon } from '@/assets/icons/widgets.svg';
 import { ReactComponent as ListIcon } from '@/assets/icons/list.svg';
+import { ReactComponent as KeyboardIcon } from '@/assets/icons/list.svg';
 
 type ViewPickerProps = {
   isOpen: boolean;
@@ -115,11 +116,18 @@ const listContent = [
     iconBg: 'bg-purple-500',
   },
   {
-    title: 'Recorder View',
-    view: ConfigurableView.RECORDER_VIEW,
-    icon: <CameraIcon className="h-6 w-6" />,
-    customStyles: 'focus:ring-green-600',
-    iconBg: 'bg-green-500',
+      title: 'Recorder View',
+      view: ConfigurableView.RECORDER_VIEW,
+      icon: <CameraIcon className="h-6 w-6" />,
+      customStyles: 'focus:ring-green-600',
+      iconBg: 'bg-green-500',
+  },
+  {
+      title: 'Keyboard View',
+      view: ConfigurableView.KEYBOARD_VIEW,
+      icon: <CameraIcon className="h-6 w-6" />,
+      customStyles: 'focus:ring-green-600',
+      iconBg: 'bg-green-500',
   },
   {
     title: 'Hardware Config View',
@@ -128,6 +136,7 @@ const listContent = [
     customStyles: 'focus:ring-teal-600',
     iconBg: 'bg-teal-500',
   },
+
 ];
 
 const ViewPicker = (props: ViewPickerProps) => {
