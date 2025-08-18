@@ -3,12 +3,13 @@ import { HardwareConfigState } from "../types/hardwareconfig";
 
 const initialState: HardwareConfigState = {
     hardwareConfigList: [],
+    hardwareConfigFiles: [],
     currentHardwareConfig: '',
 }
 
 const hardwareConfigReducer = (
     state = initialState,
-    action: 
+    action:
       | ReceiveHardwareConfigListAction,
 ) => {
     switch (action.type) {
@@ -16,6 +17,7 @@ const hardwareConfigReducer = (
             return {
                 ...state,
                 hardwareConfigList: action.hardwareConfigList,
+                hardwareConfigFiles: action.hardwareConfigFiles,
                 currentHardwareConfig: action.currentHardwareConfig,
             };
         }
