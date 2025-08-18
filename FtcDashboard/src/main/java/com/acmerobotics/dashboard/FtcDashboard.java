@@ -972,8 +972,9 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
                                 !opModeManager.getActiveOpModeName().equals(OpModeManager.DEFAULT_OP_MODE_NAME)) {
                             return;
                         }
-
                         writeRobotConfigFile(hardwareConfigName, hardwareConfigContents);
+
+                        new ListHardwareConfigsRunnable().run();
 
                         hardwareConfigList.with(l -> {
                             hardwareConfigManager.setActiveConfig(false, l.get(hardwareConfigName));

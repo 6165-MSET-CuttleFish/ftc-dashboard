@@ -10,24 +10,24 @@ export type HardwareConfigState = {
 };
 
 export type SetHardwareConfigAction = {
-    type: typeof SET_HARDWARE_CONFIG;
-    hardwareConfigName: string;
-}
+  type: typeof SET_HARDWARE_CONFIG;
+  hardwareConfigName: string;
+};
 
 export type WriteHardwareConfigAction = {
-    type: typeof WRITE_HARDWARE_CONFIG;
-    hardwareConfigName: string;
-    hardwareConfigContents: string;
-}
+  type: typeof WRITE_HARDWARE_CONFIG;
+  hardwareConfigName: string;
+  hardwareConfigContents: string;
+};
 
 export type DeleteHardwareConfigAction = {
-    type: typeof DELETE_HARDWARE_CONFIG;
-    hardwareConfigName: string;
-}
+  type: typeof DELETE_HARDWARE_CONFIG;
+  hardwareConfigName: string;
+};
 
 export type ReceiveHardwareConfigListAction = {
-    type: typeof RECEIVE_HARDWARE_CONFIG_LIST;
-    hardwareConfigList: string[];
-    hardwareConfigFiles: string[];
-    currentHardwareConfig: string;
-}
+  type: typeof RECEIVE_HARDWARE_CONFIG_LIST;
+  hardwareConfigList: string[];
+  hardwareConfigFiles: string[];
+  currentHardwareConfig: string;
+};
