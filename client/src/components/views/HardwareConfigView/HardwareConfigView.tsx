@@ -32,14 +32,9 @@ const mapStateToProps = ({ status, hardwareConfig }: RootState) => ({
 });
 
 const mapDispatchToProps = {
-  setHardwareConfig: (hardwareConfig: string) =>
-    setHardwareConfig(hardwareConfig),
-  writeHardwareConfig: (
-    hardwareConfig: string,
-    hardwareConfigContents: string,
-  ) => writeHardwareConfig(hardwareConfig, hardwareConfigContents),
-  deleteHardwareConfig: (hardwareConfig: string) =>
-    deleteHardwareConfig(hardwareConfig),
+  setHardwareConfig,
+  writeHardwareConfig,
+  deleteHardwareConfig,
 };
 
 const connector = connect(mapStateToProps, mapDispatchToProps);
@@ -88,22 +83,22 @@ class HardwareConfigView extends Component<
     this.parseEditedXmlToRobot = this.parseEditedXmlToRobot.bind(this);
   }
 
-  parseEditedXmlToRobot(xmlText?: string) {
-    const textToParse =
-      xmlText !== undefined ? xmlText : this.state.editedConfigText;
+  parseEditedXmlToRobot(xmlText?: string): boolean {
+    const text = xmlText ?? this.state.editedConfigText;
+    let parseSuccess = true;
+
     try {
-      this.state.robotInstance.fromXml(textToParse);
-      if (this.state.viewMode === 'gui') {
-        this.forceUpdate();
-      }
-      return true;
-    } catch (error) {
-      alert(
-        'Invalid XML format. Could not parse configuration. Please check the XML in the text editor.',
-      );
+      this.state.robotInstance.fromXml(text);
+      this.setState((prevState) => ({
+        robotInstance: prevState.robotInstance,
+        viewMode: prevState.viewMode === 'gui' ? 'gui' : 'text',
+      }));
+    } catch (err) {
+      parseSuccess = false;
       this.setState({ viewMode: 'text' });
-      return false;
     }
+
+    return parseSuccess;
   }
 
   hasUnsavedChanges() {
@@ -131,46 +126,43 @@ class HardwareConfigView extends Component<
     const selected = evt.target.value;
     const index = this.props.hardwareConfigList.indexOf(selected);
     const text = index !== -1 ? this.props.hardwareConfigFiles[index] : '';
-    this.setState(
-      {
-        selectedHardwareConfig: selected,
-        editedConfigText: text,
-        saveFilename: selected,
-      },
-      () => {
-        this.parseEditedXmlToRobot(text);
-      },
-    );
+
+    const parseSuccess = this.parseEditedXmlToRobot(text);
+
+    this.setState({
+      selectedHardwareConfig: selected,
+      editedConfigText: text,
+      saveFilename: selected,
+      viewMode: parseSuccess ? this.state.viewMode : 'text',
+    });
   }
 
   componentDidUpdate(prevProps: Readonly<HardwareConfigViewProps>) {
-    let newText: string | undefined = undefined;
+    const { currentHardwareConfig, hardwareConfigFiles, hardwareConfigList } =
+      this.props;
+    const { selectedHardwareConfig } = this.state;
 
-    if (prevProps.currentHardwareConfig !== this.props.currentHardwareConfig) {
-      const index = this.props.hardwareConfigList.indexOf(
-        this.props.currentHardwareConfig,
-      );
-      newText = index !== -1 ? this.props.hardwareConfigFiles[index] : '';
-      this.setState(
-        {
-          selectedHardwareConfig: this.props.currentHardwareConfig,
-          editedConfigText: newText,
-          saveFilename: this.props.currentHardwareConfig,
-        },
-        () => this.parseEditedXmlToRobot(newText),
-      );
-    } else if (
-      prevProps.hardwareConfigFiles !== this.props.hardwareConfigFiles &&
-      this.state.selectedHardwareConfig
+    if (prevProps.currentHardwareConfig !== currentHardwareConfig) {
+      const idx = hardwareConfigList.indexOf(currentHardwareConfig);
+      const newText = idx !== -1 ? hardwareConfigFiles[idx] : '';
+      this.parseEditedXmlToRobot(newText);
+      this.setState({
+        selectedHardwareConfig: currentHardwareConfig,
+        editedConfigText: newText,
+        saveFilename: currentHardwareConfig,
+      });
+      return;
+    }
+
+    if (
+      prevProps.hardwareConfigFiles !== hardwareConfigFiles &&
+      selectedHardwareConfig
     ) {
-      const idx = this.props.hardwareConfigList.indexOf(
-        this.state.selectedHardwareConfig,
-      );
+      const idx = hardwareConfigList.indexOf(selectedHardwareConfig);
       if (idx !== -1) {
-        newText = this.props.hardwareConfigFiles[idx];
-        this.setState({ editedConfigText: newText }, () =>
-          this.parseEditedXmlToRobot(newText),
-        );
+        const newText = hardwareConfigFiles[idx];
+        this.parseEditedXmlToRobot(newText);
+        this.setState({ editedConfigText: newText });
       }
     }
   }
@@ -187,7 +179,7 @@ class HardwareConfigView extends Component<
   }
 
   handleRobotGuiChange() {
-    this.forceUpdate();
+    this.setState({});
   }
 
   renderSetButton() {
@@ -228,9 +220,7 @@ class HardwareConfigView extends Component<
     if (viewMode === 'gui') {
       xmlContentToSave = robotInstance.toString();
     } else {
-      xmlContentToSave =
-        editedConfigText ||
-        `<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>\n<Robot type="FirstInspires-FTC">\n</Robot>`;
+      xmlContentToSave = editedConfigText;
     }
 
     return (
@@ -405,21 +395,13 @@ class HardwareConfigView extends Component<
             </select>
 
             <span
-              style={{
-                marginLeft: '2px',
-                userSelect:
-                  this.state.selectedHardwareConfig ===
-                    this.props.currentHardwareConfig ||
+              className={`
+                ml-0.5
+                ${this.state.selectedHardwareConfig === this.props.currentHardwareConfig ||
                   !this.state.selectedHardwareConfig
-                    ? 'none'
-                    : 'auto',
-                opacity:
-                  this.state.selectedHardwareConfig ===
-                    this.props.currentHardwareConfig ||
-                  !this.state.selectedHardwareConfig
-                    ? 0
-                    : 1,
-              }}
+                  ? 'opacity-0 select-none'
+                  : 'opacity-100 select-auto'}
+              `}
             >
               *
             </span>

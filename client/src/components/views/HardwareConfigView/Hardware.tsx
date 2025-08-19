@@ -3,11 +3,10 @@ import React from 'react';
 export class Robot {
   public controlHubs: ControlHub[] = [];
   public expansionHubs: ExpansionHub[] = [];
-  public devices: Device[] = []; // For EthernetDevice, Webcam, etc.
+  public devices: Device[] = [];
 
   public toString(): string {
     const lines: string[] = [];
-    lines.push(`<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>`);
     lines.push(`<Robot type="FirstInspires-FTC">`);
 
     if (this.controlHubs.length > 0 || this.expansionHubs.length > 0) {
@@ -662,7 +661,6 @@ export class Webcam extends Device {
   }
 
   public override toString(): string {
-    // Webcam doesn't have a port attribute in its XML
     return `<${this.key} name="${this.name}" serialNumber="${this.serialNumber}" />`;
   }
 
@@ -768,6 +766,10 @@ export const i2cType = {
   goBILDAPinpointRR: 'goBILDAPinpointRR',
 };
 
+const clamp = (value: number, min: number, max: number): number => {
+  return Math.max(min, Math.min(max, value));
+};
+
 const renderStandardDevice = (
   device: Device,
   typeObject: Record<string, string>,
@@ -776,6 +778,19 @@ const renderStandardDevice = (
   onDelete?: () => void,
   additionalFields?: JSX.Element | null,
 ): JSX.Element => {
+  let minPort = 0;
+  let maxPort = 255;
+
+  if (typeObject === motorType) {
+    maxPort = 3;
+  } else if (typeObject === servoType) {
+    maxPort = 5;
+  } else if (typeObject === analogType) {
+    maxPort = 3;
+  } else if (typeObject === digitalType) {
+    maxPort = 7;
+  }
+
   return (
     <div key={keyPrefix} style={deviceContainerStyle}>
       {onDelete && (
@@ -828,9 +843,16 @@ const renderStandardDevice = (
           type="number"
           value={isNaN(device.port) ? '' : device.port}
           onChange={(e) => {
-            device.port = parseInt(e.target.value, 10);
+            const val = parseInt(e.target.value, 10);
+            if (isNaN(val)) {
+              device.port = 0;
+            } else {
+              device.port = clamp(val, minPort, maxPort);
+            }
             configChangeCallback();
           }}
+          min={minPort}
+          max={maxPort}
         />
       </div>
       {additionalFields}
@@ -947,8 +969,8 @@ export class I2c extends Device {
   constructor() {
     super();
     this.bus = 0;
-    this.type = i2cType.AdafruitBNO055; // Default type
-    this.key = i2cType.AdafruitBNO055; // Default key
+    this.type = i2cType.AdafruitBNO055;
+    this.key = i2cType.AdafruitBNO055;
   }
   public override toString(): string {
     return `<${this.key} name="${this.name}" port="${
