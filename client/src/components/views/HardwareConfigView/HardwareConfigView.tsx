@@ -397,10 +397,13 @@ class HardwareConfigView extends Component<
             <span
               className={`
                 ml-0.5
-                ${this.state.selectedHardwareConfig === this.props.currentHardwareConfig ||
+                ${
+                  this.state.selectedHardwareConfig ===
+                    this.props.currentHardwareConfig ||
                   !this.state.selectedHardwareConfig
-                  ? 'opacity-0 select-none'
-                  : 'opacity-100 select-auto'}
+                    ? 'opacity-0 select-none'
+                    : 'opacity-100 select-auto'
+                }
               `}
             >
               *
