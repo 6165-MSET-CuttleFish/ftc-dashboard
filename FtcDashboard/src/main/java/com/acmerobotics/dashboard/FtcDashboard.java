@@ -298,16 +298,22 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
                     l.put(file.getName(), file);
                 }
                 List<String> stringValues = new ArrayList<>();
+                List<Boolean> isReadOnly = new ArrayList<>();
                 for (RobotConfigFile value : l.values()) {
                     try {
                         stringValues.add(xmlPullParserToString(value.getXml()));
+                        isReadOnly.add(value.isReadOnly());
+                        RobotLog.e("Hardware Config " + value.getName() + " and is read only? " + value.isReadOnly());
+                        RobotLog.e("Hardware Config " + value.getName() + " filepath: " + value.getFullPath());
                     } catch (java.io.FileNotFoundException | XmlPullParserException e) {
                         RobotLog.ee(TAG, "Failed to read hardware config: " + value.getName(), e);
                     }
                 }
+
                 sendAll(new ReceiveHardwareConfigList(
                         new ArrayList<>(l.keySet()),
                         new ArrayList<>(stringValues),
+                        new ArrayList<>(isReadOnly),
                         hardwareConfigManager.getActiveConfig().getName()
                 ));
             });
@@ -879,9 +885,11 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
             hardwareConfigList.with(l -> {
                 if (!l.isEmpty()){
                     List<String> stringValues = new ArrayList<>();
+                    List<Boolean> isReadOnly = new ArrayList<>();
                     for (RobotConfigFile value : l.values()) {
                         try {
                             stringValues.add(xmlPullParserToString(value.getXml()));
+                            isReadOnly.add(value.isReadOnly());
                         } catch (java.io.FileNotFoundException | XmlPullParserException e) {
                             RobotLog.ee(TAG, "Failed to read hardware config: " + value.getName(), e);
                         }
@@ -889,8 +897,9 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
                     send(new ReceiveHardwareConfigList(
                             new ArrayList<>(l.keySet()),
                             new ArrayList<>(stringValues),
-                            hardwareConfigManager.getActiveConfig().getName())
-                    );
+                            new ArrayList<>(isReadOnly),
+                            hardwareConfigManager.getActiveConfig().getName()
+                    ));
                 }
             });
 
