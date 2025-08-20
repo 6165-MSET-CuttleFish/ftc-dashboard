@@ -1,9 +1,24 @@
 import React from 'react';
 
+interface RobotSectionState {
+  controlHubs: boolean;
+  expansionHubs: boolean;
+  otherDevices: boolean;
+}
+
 export class Robot {
   public controlHubs: ControlHub[] = [];
   public expansionHubs: ExpansionHub[] = [];
   public devices: Device[] = [];
+  public collapsedSections: RobotSectionState;
+
+  constructor() {
+    this.collapsedSections = {
+      controlHubs: false,
+      expansionHubs: false,
+      otherDevices: false,
+    };
+  }
 
   public toString(): string {
     const lines: string[] = [];
@@ -41,6 +56,11 @@ export class Robot {
     this.controlHubs = [];
     this.expansionHubs = [];
     this.devices = [];
+    this.collapsedSections = {
+      controlHubs: false,
+      expansionHubs: false,
+      otherDevices: false,
+    };
 
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlString, 'application/xml');
@@ -173,84 +193,151 @@ export class Robot {
     configChangeCallback: () => void,
     keyPrefix: string,
   ): JSX.Element {
+    const isControlHubsCollapsed = this.collapsedSections.controlHubs;
+    const isExpansionHubsCollapsed = this.collapsedSections.expansionHubs;
+    const isOtherDevicesCollapsed = this.collapsedSections.otherDevices;
+
     return (
       <div
         key={keyPrefix}
         style={{ padding: '10px', fontFamily: 'Arial, sans-serif' }}
       >
         <h3>Robot Configuration</h3>
-        <button
-          style={addButtonStyle}
-          onClick={() => {
-            this.controlHubs.push(new ControlHub());
-            configChangeCallback();
-          }}
-        >
-          +
-        </button>{' '}
-        Control Hub
-        <button
-          style={addButtonStyle}
-          onClick={() => {
-            this.expansionHubs.push(new ExpansionHub());
-            configChangeCallback();
-          }}
-        >
-          +
-        </button>{' '}
-        Expansion Hub
+        {/* Control Hubs Section */}
+        <div>
+          <div
+            style={sectionHeaderStyle}
+            onClick={() => {
+              this.collapsedSections.controlHubs = !isControlHubsCollapsed;
+              configChangeCallback();
+            }}
+          >
+            <h4>Control Hubs</h4>
+            <button style={toggleButtonStyle}>
+              {isControlHubsCollapsed ? '▶' : '▼'}
+            </button>
+          </div>
+          {!isControlHubsCollapsed && (
+            <>
+              <button
+                style={addButtonStyle}
+                onClick={(e) => {
+                  e.stopPropagation(); 
+                  this.controlHubs.push(new ControlHub());
+                  configChangeCallback();
+                }}
+              >
+                +
+              </button>{' '}
+              Add Control Hub
+              {this.controlHubs.map((hub, index) =>
+                hub.renderAsGui(
+                  configChangeCallback,
+                  `${keyPrefix}-ch-${index}`,
+                  () => {
+                    this.controlHubs.splice(index, 1);
+                    configChangeCallback();
+                  },
+                ),
+              )}
+            </>
+          )}
+        </div>
         <hr />
-        {this.controlHubs.map((hub, index) =>
-          hub.renderAsGui(
-            configChangeCallback,
-            `${keyPrefix}-ch-${index}`,
-            () => {
-              this.controlHubs.splice(index, 1);
+
+        {/* Expansion Hubs Section */}
+        <div>
+          <div
+            style={sectionHeaderStyle}
+            onClick={() => {
+              this.collapsedSections.expansionHubs = !isExpansionHubsCollapsed;
               configChangeCallback();
-            },
-          ),
-        )}
-        {this.expansionHubs.map((hub, index) =>
-          hub.renderAsGui(
-            configChangeCallback,
-            `${keyPrefix}-eh-${index}`,
-            () => {
-              this.expansionHubs.splice(index, 1);
+            }}
+          >
+            <h4>Expansion Hubs</h4>
+            <button style={toggleButtonStyle}>
+              {isExpansionHubsCollapsed ? '▶' : '▼'}
+            </button>
+          </div>
+          {!isExpansionHubsCollapsed && (
+            <>
+              <button
+                style={addButtonStyle}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  this.expansionHubs.push(new ExpansionHub());
+                  configChangeCallback();
+                }}
+              >
+                +
+              </button>{' '}
+              Add Expansion Hub
+              {this.expansionHubs.map((hub, index) =>
+                hub.renderAsGui(
+                  configChangeCallback,
+                  `${keyPrefix}-eh-${index}`,
+                  () => {
+                    this.expansionHubs.splice(index, 1);
+                    configChangeCallback();
+                  },
+                ),
+              )}
+            </>
+          )}
+        </div>
+        <hr />
+
+        {/* Other Devices Section */}
+        <div>
+          <div
+            style={sectionHeaderStyle}
+            onClick={() => {
+              this.collapsedSections.otherDevices = !isOtherDevicesCollapsed;
               configChangeCallback();
-            },
-          ),
-        )}
-        <h4>Other Devices</h4>
-        <button
-          style={addButtonStyle}
-          onClick={() => {
-            this.devices.push(new EthernetDevice());
-            configChangeCallback();
-          }}
-        >
-          +
-        </button>{' '}
-        Ethernet Device
-        <button
-          style={addButtonStyle}
-          onClick={() => {
-            this.devices.push(new Webcam());
-            configChangeCallback();
-          }}
-        >
-          +
-        </button>{' '}
-        Webcam
-        {this.devices.map((device, index) =>
-          device.renderAsGui(
-            configChangeCallback,
-            `${keyPrefix}-od-${index}`,
-            () => {
-              this.devices.splice(index, 1);
-              configChangeCallback();
-            },
-          ),
-        )}
+            }}
+          >
+            <h4>Other Devices</h4>
+            <button style={toggleButtonStyle}>
+              {isOtherDevicesCollapsed ? '▶' : '▼'}
+            </button>
+          </div>
+          {!isOtherDevicesCollapsed && (
+            <>
+              <button
+                style={addButtonStyle}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  this.devices.push(new EthernetDevice());
+                  configChangeCallback();
+                }}
+              >
+                +
+              </button>{' '}
+              Ethernet Device
+              <button
+                style={addButtonStyle}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  this.devices.push(new Webcam());
+                  configChangeCallback();
+                }}
+              >
+                +
+              </button>{' '}
+              Webcam
+              {this.devices.map((device, index) =>
+                device.renderAsGui(
+                  configChangeCallback,
+                  `${keyPrefix}-od-${index}`,
+                  () => {
+                    this.devices.splice(index, 1);
+                    configChangeCallback();
+                  },
+                ),
+              )}
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -327,15 +414,49 @@ const hubDeleteButtonStyle: React.CSSProperties = {
   right: '15px',
 };
 
+const sectionHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  cursor: 'pointer',
+  paddingBottom: '5px',
+  borderBottom: '1px solid #ddd',
+  marginBottom: '10px',
+};
+
+const toggleButtonStyle: React.CSSProperties = {
+  background: 'none',
+  border: 'none',
+  fontSize: '1.2em',
+  cursor: 'pointer',
+  padding: '0 5px',
+};
+
+interface HubSectionState {
+  motors: boolean;
+  servos: boolean;
+  i2cDevices: boolean;
+  digitalDevices: boolean;
+  analogInputDevices: boolean;
+}
+
 export abstract class Hub extends Device {
   public motors: Motor[] = [];
   public servos: Servo[] = [];
   public i2cDevices: I2c[] = [];
   public digitalDevices: Digital[] = [];
   public analogInputDevices: Analog[] = [];
+  public collapsedSections: HubSectionState;
 
   constructor() {
     super();
+    this.collapsedSections = {
+      motors: false,
+      servos: false,
+      i2cDevices: false,
+      digitalDevices: false,
+      analogInputDevices: false,
+    };
   }
 
   public override toString(): string {
@@ -371,6 +492,61 @@ export abstract class Hub extends Device {
     keyPrefix: string,
     onDelete?: () => void,
   ): JSX.Element {
+    const renderCollapsibleSection = (
+      sectionName: keyof HubSectionState,
+      title: string,
+      devices: Device[],
+      addDeviceCallback: () => void,
+      renderDeviceCallback: (device: Device, index: number) => JSX.Element,
+    ) => {
+      const isCollapsed = this.collapsedSections[sectionName];
+      return (
+        <div>
+          <div
+            style={sectionHeaderStyle}
+            onClick={() => {
+              this.collapsedSections[sectionName] = !isCollapsed;
+              configChangeCallback();
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <h5 style={{ margin: '0', marginRight: '10px' }}>{title}</h5>
+              <button
+                style={{...addButtonStyle, marginLeft: '0'}}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isCollapsed) {
+                    this.collapsedSections[sectionName] = false;
+                  }
+                  addDeviceCallback();
+                }}
+              >
+                +
+              </button>
+            </div>
+            {/* Collapse button */}
+            <button
+              style={toggleButtonStyle}
+              onClick={(e) => {
+                e.stopPropagation();
+                this.collapsedSections[sectionName] = !isCollapsed;
+                configChangeCallback();
+              }}
+            >
+              {isCollapsed ? '▶' : '▼'}
+            </button>
+          </div>
+          {!isCollapsed && (
+            <>
+              {devices.map((device, index) =>
+                renderDeviceCallback(device, index),
+              )}
+            </>
+          )}
+        </div>
+      );
+    };
+
     return (
       <div
         key={keyPrefix}
@@ -412,20 +588,15 @@ export abstract class Hub extends Device {
           )}
         </h4>
 
-        <div>
-          <h5>
-            Motors{' '}
-            <button
-              style={addButtonStyle}
-              onClick={() => {
-                this.motors.push(new Motor());
-                configChangeCallback();
-              }}
-            >
-              +
-            </button>
-          </h5>
-          {this.motors.map((motor, index) =>
+        {renderCollapsibleSection(
+          'motors',
+          'Motors',
+          this.motors,
+          () => {
+            this.motors.push(new Motor());
+            configChangeCallback();
+          },
+          (motor, index) =>
             motor.renderAsGui(
               configChangeCallback,
               `${keyPrefix}-motor-${index}`,
@@ -434,22 +605,17 @@ export abstract class Hub extends Device {
                 configChangeCallback();
               },
             ),
-          )}
-        </div>
-        <div>
-          <h5>
-            Servos{' '}
-            <button
-              style={addButtonStyle}
-              onClick={() => {
-                this.servos.push(new Servo());
-                configChangeCallback();
-              }}
-            >
-              +
-            </button>
-          </h5>
-          {this.servos.map((servo, index) =>
+        )}
+
+        {renderCollapsibleSection(
+          'servos',
+          'Servos',
+          this.servos,
+          () => {
+            this.servos.push(new Servo());
+            configChangeCallback();
+          },
+          (servo, index) =>
             servo.renderAsGui(
               configChangeCallback,
               `${keyPrefix}-servo-${index}`,
@@ -458,22 +624,17 @@ export abstract class Hub extends Device {
                 configChangeCallback();
               },
             ),
-          )}
-        </div>
-        <div>
-          <h5>
-            I2C Devices{' '}
-            <button
-              style={addButtonStyle}
-              onClick={() => {
-                this.i2cDevices.push(new I2c());
-                configChangeCallback();
-              }}
-            >
-              +
-            </button>
-          </h5>
-          {this.i2cDevices.map((i2c, index) =>
+        )}
+
+        {renderCollapsibleSection(
+          'i2cDevices',
+          'I2C Devices',
+          this.i2cDevices,
+          () => {
+            this.i2cDevices.push(new I2c());
+            configChangeCallback();
+          },
+          (i2c, index) =>
             i2c.renderAsGui(
               configChangeCallback,
               `${keyPrefix}-i2c-${index}`,
@@ -482,22 +643,17 @@ export abstract class Hub extends Device {
                 configChangeCallback();
               },
             ),
-          )}
-        </div>
-        <div>
-          <h5>
-            Analog Inputs{' '}
-            <button
-              style={addButtonStyle}
-              onClick={() => {
-                this.analogInputDevices.push(new Analog());
-                configChangeCallback();
-              }}
-            >
-              +
-            </button>
-          </h5>
-          {this.analogInputDevices.map((analog, index) =>
+        )}
+
+        {renderCollapsibleSection(
+          'analogInputDevices',
+          'Analog Inputs',
+          this.analogInputDevices,
+          () => {
+            this.analogInputDevices.push(new Analog());
+            configChangeCallback();
+          },
+          (analog, index) =>
             analog.renderAsGui(
               configChangeCallback,
               `${keyPrefix}-analog-${index}`,
@@ -506,22 +662,17 @@ export abstract class Hub extends Device {
                 configChangeCallback();
               },
             ),
-          )}
-        </div>
-        <div>
-          <h5>
-            Digital Devices{' '}
-            <button
-              style={addButtonStyle}
-              onClick={() => {
-                this.digitalDevices.push(new Digital());
-                configChangeCallback();
-              }}
-            >
-              +
-            </button>
-          </h5>
-          {this.digitalDevices.map((digital, index) =>
+        )}
+
+        {renderCollapsibleSection(
+          'digitalDevices',
+          'Digital Devices',
+          this.digitalDevices,
+          () => {
+            this.digitalDevices.push(new Digital());
+            configChangeCallback();
+          },
+          (digital, index) =>
             digital.renderAsGui(
               configChangeCallback,
               `${keyPrefix}-digital-${index}`,
@@ -530,8 +681,7 @@ export abstract class Hub extends Device {
                 configChangeCallback();
               },
             ),
-          )}
-        </div>
+        )}
       </div>
     );
   }
