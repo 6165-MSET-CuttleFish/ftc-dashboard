@@ -7,12 +7,14 @@ interface RobotSectionState {
 }
 
 export class Robot {
+  public name: string;
   public controlHubs: ControlHub[] = [];
   public expansionHubs: ExpansionHub[] = [];
   public devices: Device[] = [];
   public collapsedSections: RobotSectionState;
 
   constructor() {
+    this.name = "Control Hub Portal";
     this.collapsedSections = {
       controlHubs: false,
       expansionHubs: false,
@@ -25,9 +27,7 @@ export class Robot {
     lines.push(`<Robot type="FirstInspires-FTC">`);
 
     if (this.controlHubs.length > 0 || this.expansionHubs.length > 0) {
-      lines.push(
-        `    <LynxUsbDevice name="Control Hub Portal" parentModuleAddress="173" serialNumber="(embedded)">`,
-      );
+      lines.push(`    <LynxUsbDevice name="${this.name}" parentModuleAddress="173" serialNumber="(embedded)">`);
       for (const hub of this.controlHubs) {
         const moduleXml = hub.toString();
         moduleXml.split('\n').forEach((line) => {
@@ -56,6 +56,7 @@ export class Robot {
     this.controlHubs = [];
     this.expansionHubs = [];
     this.devices = [];
+    this.name = "Control Hub Portal";
     this.collapsedSections = {
       controlHubs: false,
       expansionHubs: false,
@@ -73,6 +74,12 @@ export class Robot {
       name: string,
       def: string | null = null,
     ): string | null => el.getAttribute(name) ?? def;
+
+    const lynxUsbDeviceElement = robotElement.getElementsByTagName('LynxUsbDevice')[0];
+    if (lynxUsbDeviceElement) {
+        this.name = getAttr(lynxUsbDeviceElement, 'name') || this.name;
+    }
+
 
     const createDeviceInstance = (
       element: Element,
@@ -202,7 +209,18 @@ export class Robot {
         key={keyPrefix}
         style={{ padding: '10px', fontFamily: 'Arial, sans-serif' }}
       >
-        <h3>Robot Configuration</h3>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={labelStyle}>Control Hub Portal Name: </label>
+          <input
+            style={inputStyle}
+            type="text"
+            value={this.name}
+            onChange={(e) => {
+              this.name = e.target.value;
+              configChangeCallback();
+            }}
+          />
+        </div>
         {/* Control Hubs Section */}
         <div>
           <div
