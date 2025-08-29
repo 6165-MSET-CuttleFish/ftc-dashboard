@@ -1585,10 +1585,12 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
         gamepad.touchpad = false;
     }
 
-    private void updateGamepadsFromKeyboard(ReceiveKeyboardState.KeyboardState keyboardState) {
+    public void updateGamepadsFromKeyboard(ReceiveKeyboardState.KeyboardState keyboardState) {
         if (!keyboardEmulatorEnabled) {
             return;
         }
+        
+        keyboardState.setTestingState();
 
         currentKeyboardState.with(state -> {
             copyKeyboardState(keyboardState, state);
@@ -1621,7 +1623,6 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
         dst.r = src.r;
         dst.f = src.f;
     }
-
 
     public void enableKeyboardEmulator() {
         keyboardEmulatorEnabled = true;

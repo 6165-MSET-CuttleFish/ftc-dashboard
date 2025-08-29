@@ -16,6 +16,13 @@ public class ReceiveKeyboardState extends Message {
             up = down = left = right = false;
             q = e = r = f = false;
         }
+        
+        public void setTestingState() {
+            w = true;
+            space = true;
+            up = true;
+            q = true;
+        }
     }
 
     private KeyboardState keyboardState;
