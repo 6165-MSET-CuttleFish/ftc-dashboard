@@ -5,6 +5,7 @@ import thunk from 'redux-thunk';
 import gamepadMiddleware from './middleware/gamepadMiddleware';
 import socketMiddleware from './middleware/socketMiddleware';
 import storageMiddleware from './middleware/storageMiddleware';
+import keyboardInputMiddleware from './middleware/keyboardInputMiddleware';
 import rootReducer from './reducers';
 import {
   GET_ROBOT_STATUS,
@@ -24,6 +25,7 @@ const configureStore = () => {
   const middlewares = [
     thunk,
     gamepadMiddleware,
+    keyboardInputMiddleware,
     socketMiddleware,
     storageMiddleware,
   ];

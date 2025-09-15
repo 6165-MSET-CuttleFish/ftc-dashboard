@@ -11,6 +11,7 @@ import { ReactComponent as SubjectIcon } from '@/assets/icons/subject.svg';
 import { ReactComponent as WidgetIcon } from '@/assets/icons/widgets.svg';
 import { ReactComponent as ListIcon } from '@/assets/icons/list.svg';
 import { ReactComponent as HardwareIcon } from '@/assets/icons/hardware.svg';
+import { ReactComponent as GamepadIcon } from '@/assets/icons/gamepad.svg';
 
 type ViewPickerProps = {
   isOpen: boolean;
@@ -135,6 +136,13 @@ const listContent = [
     icon: <SettingsIcon className="h-5 w-5" />,
     customStyles: 'focus:ring-teal-600',
     iconBg: 'bg-teal-500',
+  },
+  {
+    title: 'Gamepad View',
+    view: ConfigurableView.GAMEPAD_VIEW,
+    icon: <GamepadIcon className="h-6 w-6" />,
+    customStyles: 'focus:ring-cyan-600',
+    iconBg: 'bg-cyan-500',
   },
 ];
 
