@@ -92,8 +92,10 @@ const GamepadStick: React.FC<StickProps> = ({
   onStickMove,
   onStickReset
 }) => {
-  const normalizedX = (x + 1) * 50; // Convert from -1,1 to 0,100
-  const normalizedY = (1 - y) * 50; // Convert from -1,1 to 0,100 (invert Y)
+  // Use percentage-based positioning for more accurate centering
+  // Convert from -1,1 range to 0-100% with center at 50%
+  const normalizedX = 50 + (x * 40); // -1 to 1 mapped to 10% to 90% (40% range from center)
+  const normalizedY = 50 - (y * 40); // -1 to 1 mapped to 90% to 10% (invert Y, 40% range from center)
   
   const handleStickClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!onStickMove) return;
@@ -139,8 +141,9 @@ const GamepadStick: React.FC<StickProps> = ({
               : 'bg-gray-600 dark:bg-gray-400'
           )}
           style={{
-            left: `${normalizedX - 8}px`,
-            top: `${normalizedY - 8}px`,
+            left: `${normalizedX}%`,
+            top: `${normalizedY}%`,
+            transform: 'translate(-50%, -50%)', // Center the knob on its position
           }}
         />
         {/* Crosshair */}
