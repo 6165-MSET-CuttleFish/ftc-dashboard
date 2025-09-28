@@ -192,6 +192,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
   const [showSettings, setShowSettings] = useState(false);
   const [selectedGamepad, setSelectedGamepad] = useState<1 | 2>(1);
   const [viewMode, setViewMode] = useState<'single' | 'dual'>('single');
+  const [keyboardTarget, setKeyboardTarget] = useState<1 | 2>(1);
   
   const gamepadConnectionState = useSelector((state: RootState) => state.gamepad);
   const keyboardMappingState = useSelector((state: RootState) => state.keyboardMapping);
@@ -300,6 +301,89 @@ const GamepadView: React.FC<GamepadViewProps> = ({
   // Get current gamepad state based on selection
   const currentGamepadState = selectedGamepad === 1 ? gamepad1State : gamepad2State;
   
+  // Keyboard event handling for the selected keyboard target gamepad
+  useEffect(() => {
+    if (!keyboardMappingState.enabled) return;
+
+    const pressedKeys = new Set<string>();
+    
+    const handleKeyDown = (event: KeyboardEvent) => {
+      pressedKeys.add(event.code);
+      updateKeyboardGamepadState();
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      pressedKeys.delete(event.code);
+      updateKeyboardGamepadState();
+    };
+
+    const updateKeyboardGamepadState = () => {
+      const mapping = keyboardMappingState.mapping;
+      
+      // Handle stick movements (analog)
+      let leftStickX = 0;
+      let leftStickY = 0;
+      let rightStickX = 0;
+      let rightStickY = 0;
+      
+      if (pressedKeys.has(mapping.left_stick_left || '')) leftStickX -= 1;
+      if (pressedKeys.has(mapping.left_stick_right || '')) leftStickX += 1;
+      if (pressedKeys.has(mapping.left_stick_up || '')) leftStickY += 1;
+      if (pressedKeys.has(mapping.left_stick_down || '')) leftStickY -= 1;
+      
+      if (pressedKeys.has(mapping.right_stick_left || '')) rightStickX -= 1;
+      if (pressedKeys.has(mapping.right_stick_right || '')) rightStickX += 1;
+      if (pressedKeys.has(mapping.right_stick_up || '')) rightStickY += 1;
+      if (pressedKeys.has(mapping.right_stick_down || '')) rightStickY -= 1;
+      
+      // Create the new state for the target gamepad
+      const newState = {
+        left_stick_x: leftStickX,
+        left_stick_y: leftStickY,
+        right_stick_x: rightStickX,
+        right_stick_y: rightStickY,
+        
+        // Handle digital buttons
+        dpad_up: pressedKeys.has(mapping.dpad_up || ''),
+        dpad_down: pressedKeys.has(mapping.dpad_down || ''),
+        dpad_left: pressedKeys.has(mapping.dpad_left || ''),
+        dpad_right: pressedKeys.has(mapping.dpad_right || ''),
+        
+        a: pressedKeys.has(mapping.a || ''),
+        b: pressedKeys.has(mapping.b || ''),
+        x: pressedKeys.has(mapping.x || ''),
+        y: pressedKeys.has(mapping.y || ''),
+        
+        guide: pressedKeys.has(mapping.guide || ''),
+        start: pressedKeys.has(mapping.start || ''),
+        back: pressedKeys.has(mapping.back || ''),
+        
+        left_bumper: pressedKeys.has(mapping.left_bumper || ''),
+        right_bumper: pressedKeys.has(mapping.right_bumper || ''),
+        
+        left_stick_button: pressedKeys.has(mapping.left_stick_button || ''),
+        right_stick_button: pressedKeys.has(mapping.right_stick_button || ''),
+        
+        // Handle triggers (analog)
+        left_trigger: pressedKeys.has(mapping.left_trigger || '') ? 1 : 0,
+        right_trigger: pressedKeys.has(mapping.right_trigger || '') ? 1 : 0,
+        
+        touchpad: mapping.touchpad ? pressedKeys.has(mapping.touchpad) : false,
+      };
+      
+      // Update the state for the keyboard target gamepad
+      updateGamepadState(keyboardTarget, newState);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [keyboardMappingState.enabled, keyboardMappingState.mapping, keyboardTarget, updateGamepadState]);
+  
   const formatKeyName = (keyCode: string) => {
     if (!keyCode) return '';
     return keyCode.replace(/^Key/, '').replace(/^Arrow/, '').replace(/Left$|Right$/, '');
@@ -353,7 +437,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
               <GamepadButton
                 label="LB"
                 isActive={gamepadState.left_bumper}
-                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_bumper || '') : ''}
+                keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.left_bumper || '') : ''}
                 onClick={createButtonToggleHandler(gamepadNum, 'left_bumper')}
                 className={isCompact ? 'min-h-[50px] min-w-[50px]' : ''}
               />
@@ -361,7 +445,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 label="LT"
                 isActive={gamepadState.left_trigger > 0}
                 value={gamepadState.left_trigger}
-                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_trigger || '') : ''}
+                keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.left_trigger || '') : ''}
                 onClick={createButtonToggleHandler(gamepadNum, 'left_trigger')}
                 className={isCompact ? 'min-h-[50px] min-w-[50px]' : ''}
               />
@@ -371,14 +455,14 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 label="RT"
                 isActive={gamepadState.right_trigger > 0}
                 value={gamepadState.right_trigger}
-                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_trigger || '') : ''}
+                keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.right_trigger || '') : ''}
                 onClick={createButtonToggleHandler(gamepadNum, 'right_trigger')}
                 className={isCompact ? 'min-h-[50px] min-w-[50px]' : ''}
               />
               <GamepadButton
                 label="RB"
                 isActive={gamepadState.right_bumper}
-                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_bumper || '') : ''}
+                keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.right_bumper || '') : ''}
                 onClick={createButtonToggleHandler(gamepadNum, 'right_bumper')}
                 className={isCompact ? 'min-h-[50px] min-w-[50px]' : ''}
               />
@@ -393,10 +477,10 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 x={gamepadState.left_stick_x}
                 y={gamepadState.left_stick_y}
                 label="L3"
-                upKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_stick_up || '') : ''}
-                downKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_stick_down || '') : ''}
-                leftKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_stick_left || '') : ''}
-                rightKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_stick_right || '') : ''}
+                upKey={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.left_stick_up || '') : ''}
+                downKey={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.left_stick_down || '') : ''}
+                leftKey={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.left_stick_left || '') : ''}
+                rightKey={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.left_stick_right || '') : ''}
                 isPressed={gamepadState.left_stick_button}
                 onStickButtonClick={createButtonToggleHandler(gamepadNum, 'left_stick_button')}
                 onStickMove={(x, y) => updateGamepadState(gamepadNum, { left_stick_x: x, left_stick_y: y })}
@@ -409,7 +493,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 <GamepadButton
                   label="↑"
                   isActive={gamepadState.dpad_up}
-                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.dpad_up || '') : ''}
+                  keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.dpad_up || '') : ''}
                   onClick={createButtonToggleHandler(gamepadNum, 'dpad_up')}
                   className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
                 />
@@ -417,7 +501,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 <GamepadButton
                   label="←"
                   isActive={gamepadState.dpad_left}
-                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.dpad_left || '') : ''}
+                  keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.dpad_left || '') : ''}
                   onClick={createButtonToggleHandler(gamepadNum, 'dpad_left')}
                   className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
                 />
@@ -425,7 +509,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 <GamepadButton
                   label="→"
                   isActive={gamepadState.dpad_right}
-                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.dpad_right || '') : ''}
+                  keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.dpad_right || '') : ''}
                   onClick={createButtonToggleHandler(gamepadNum, 'dpad_right')}
                   className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
                 />
@@ -433,7 +517,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 <GamepadButton
                   label="↓"
                   isActive={gamepadState.dpad_down}
-                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.dpad_down || '') : ''}
+                  keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.dpad_down || '') : ''}
                   onClick={createButtonToggleHandler(gamepadNum, 'dpad_down')}
                   className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
                 />
@@ -446,21 +530,21 @@ const GamepadView: React.FC<GamepadViewProps> = ({
               <GamepadButton
                 label="Back"
                 isActive={gamepadState.back}
-                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.back || '') : ''}
+                keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.back || '') : ''}
                 onClick={createButtonToggleHandler(gamepadNum, 'back')}
                 className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
               />
               <GamepadButton
                 label="Guide"
                 isActive={gamepadState.guide}
-                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.guide || '') : ''}
+                keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.guide || '') : ''}
                 className={clsx('rounded-full', isCompact ? 'min-h-[40px] min-w-[40px]' : '')}
                 onClick={createButtonToggleHandler(gamepadNum, 'guide')}
               />
               <GamepadButton
                 label="Start"
                 isActive={gamepadState.start}
-                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.start || '') : ''}
+                keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.start || '') : ''}
                 onClick={createButtonToggleHandler(gamepadNum, 'start')}
                 className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
               />
@@ -474,7 +558,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 <GamepadButton
                   label="Y"
                   isActive={gamepadState.y}
-                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.y || '') : ''}
+                  keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.y || '') : ''}
                   onClick={createButtonToggleHandler(gamepadNum, 'y')}
                   className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
                 />
@@ -482,7 +566,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 <GamepadButton
                   label="X"
                   isActive={gamepadState.x}
-                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.x || '') : ''}
+                  keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.x || '') : ''}
                   onClick={createButtonToggleHandler(gamepadNum, 'x')}
                   className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
                 />
@@ -490,7 +574,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 <GamepadButton
                   label="B"
                   isActive={gamepadState.b}
-                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.b || '') : ''}
+                  keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.b || '') : ''}
                   onClick={createButtonToggleHandler(gamepadNum, 'b')}
                   className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
                 />
@@ -498,7 +582,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 <GamepadButton
                   label="A"
                   isActive={gamepadState.a}
-                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.a || '') : ''}
+                  keyBinding={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.a || '') : ''}
                   onClick={createButtonToggleHandler(gamepadNum, 'a')}
                   className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
                 />
@@ -509,10 +593,10 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 x={gamepadState.right_stick_x}
                 y={gamepadState.right_stick_y}
                 label="R3"
-                upKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_stick_up || '') : ''}
-                downKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_stick_down || '') : ''}
-                leftKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_stick_left || '') : ''}
-                rightKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_stick_right || '') : ''}
+                upKey={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.right_stick_up || '') : ''}
+                downKey={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.right_stick_down || '') : ''}
+                leftKey={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.right_stick_left || '') : ''}
+                rightKey={gamepadNum === keyboardTarget ? formatKeyName(keyboardMappingState.mapping.right_stick_right || '') : ''}
                 isPressed={gamepadState.right_stick_button}
                 onStickButtonClick={createButtonToggleHandler(gamepadNum, 'right_stick_button')}
                 onStickMove={(x, y) => updateGamepadState(gamepadNum, { right_stick_x: x, right_stick_y: y })}
@@ -569,9 +653,8 @@ const GamepadView: React.FC<GamepadViewProps> = ({
           <div className="text-blue-700 dark:text-blue-300 space-y-1">
             <div>• Click any button to toggle it on/off</div>
             <div>• Click analog sticks to set position, double-click to reset</div>
-            <div>• Keyboard controls only work with Gamepad 1</div>
-            <div>• Use click controls for both gamepads</div>
-            <div>• Hardware gamepads override click controls when connected</div>
+            <div>• Use keyboard controls toggle to switch between Gamepad 1 and 2</div>
+            <div>• Hardware gamepads override click/keyboard controls when connected</div>
           </div>
         </div>
 
@@ -606,6 +689,35 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 <span className="ml-2 inline-block h-2 w-2 rounded-full bg-green-500"></span>
               )}
             </button>
+          </div>
+
+          {/* Keyboard Target Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">Keyboard controls:</span>
+            <div className="flex rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+              <button
+                className={clsx(
+                  'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  keyboardTarget === 1
+                    ? 'bg-blue-500 text-white shadow'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                )}
+                onClick={() => setKeyboardTarget(1)}
+              >
+                GP1
+              </button>
+              <button
+                className={clsx(
+                  'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  keyboardTarget === 2
+                    ? 'bg-blue-500 text-white shadow'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                )}
+                onClick={() => setKeyboardTarget(2)}
+              >
+                GP2
+              </button>
+            </div>
           </div>
 
           {/* View Mode Toggle */}
