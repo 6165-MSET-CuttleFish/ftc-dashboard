@@ -190,13 +190,38 @@ const GamepadView: React.FC<GamepadViewProps> = ({
 }) => {
   const dispatch = useDispatch();
   const [showSettings, setShowSettings] = useState(false);
+  const [selectedGamepad, setSelectedGamepad] = useState<1 | 2>(1);
+  const [viewMode, setViewMode] = useState<'single' | 'dual'>('single');
   
   const gamepadConnectionState = useSelector((state: RootState) => state.gamepad);
   const keyboardMappingState = useSelector((state: RootState) => state.keyboardMapping);
   
-  // For demo purposes, show a simulated gamepad state that responds to keyboard
-  // In the future, this could show the actual gamepad state from the hardware
-  const [currentGamepadState, setCurrentGamepadState] = useState<GamepadState>({
+  // State for both gamepads
+  const [gamepad1State, setGamepad1State] = useState<GamepadState>({
+    left_stick_x: 0,
+    left_stick_y: 0,
+    right_stick_x: 0,
+    right_stick_y: 0,
+    dpad_up: false,
+    dpad_down: false,
+    dpad_left: false,
+    dpad_right: false,
+    a: false,
+    b: false,
+    x: false,
+    y: false,
+    guide: false,
+    start: false,
+    back: false,
+    left_bumper: false,
+    right_bumper: false,
+    left_stick_button: false,
+    right_stick_button: false,
+    left_trigger: 0,
+    right_trigger: 0,
+  });
+
+  const [gamepad2State, setGamepad2State] = useState<GamepadState>({
     left_stick_x: 0,
     left_stick_y: 0,
     right_stick_x: 0,
@@ -221,12 +246,33 @@ const GamepadView: React.FC<GamepadViewProps> = ({
   });
 
   // Function to dispatch gamepad state changes
-  const updateGamepadState = useCallback((newState: Partial<GamepadState>) => {
-    const updatedState = { ...currentGamepadState, ...newState };
-    setCurrentGamepadState(updatedState);
-    
-    // Dispatch to Redux store to send to the robot
-    dispatch(receiveGamepadState(updatedState, {
+  const updateGamepadState = useCallback((gamepadNum: 1 | 2, newState: Partial<GamepadState>) => {
+    if (gamepadNum === 1) {
+      const updatedState = { ...gamepad1State, ...newState };
+      setGamepad1State(updatedState);
+      dispatch(receiveGamepadState(updatedState, gamepad2State));
+    } else {
+      const updatedState = { ...gamepad2State, ...newState };
+      setGamepad2State(updatedState);
+      dispatch(receiveGamepadState(gamepad1State, updatedState));
+    }
+  }, [gamepad1State, gamepad2State, dispatch]);
+
+  // Button press handlers for specific gamepad
+  const createButtonToggleHandler = useCallback((gamepadNum: 1 | 2, buttonKey: keyof GamepadState) => {
+    return () => {
+      const currentGamepadState = gamepadNum === 1 ? gamepad1State : gamepad2State;
+      const currentValue = currentGamepadState[buttonKey];
+      const newValue = typeof currentValue === 'number' 
+        ? (currentValue > 0 ? 0 : 1) 
+        : !currentValue;
+      updateGamepadState(gamepadNum, { [buttonKey]: newValue });
+    };
+  }, [gamepad1State, gamepad2State, updateGamepadState]);
+
+  // Reset all controls for a specific gamepad
+  const resetGamepad = useCallback((gamepadNum: 1 | 2) => {
+    const neutralState: GamepadState = {
       left_stick_x: 0,
       left_stick_y: 0,
       right_stick_x: 0,
@@ -248,148 +294,242 @@ const GamepadView: React.FC<GamepadViewProps> = ({
       right_stick_button: false,
       left_trigger: 0,
       right_trigger: 0,
-    }));
-  }, [currentGamepadState, dispatch]);
-
-  // Button press handlers
-  const createButtonHandler = useCallback((buttonKey: keyof GamepadState, value: boolean | number = true) => {
-    return () => updateGamepadState({ [buttonKey]: value });
-  }, [updateGamepadState]);
-
-  const createButtonToggleHandler = useCallback((buttonKey: keyof GamepadState) => {
-    return () => {
-      const currentValue = currentGamepadState[buttonKey];
-      const newValue = typeof currentValue === 'number' 
-        ? (currentValue > 0 ? 0 : 1) 
-        : !currentValue;
-      updateGamepadState({ [buttonKey]: newValue });
     };
-  }, [currentGamepadState, updateGamepadState]);
-
-  // Stick interaction handlers
-  const createStickHandler = useCallback((stickXKey: keyof GamepadState, stickYKey: keyof GamepadState) => {
-    return (event: React.MouseEvent<HTMLDivElement>) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      
-      const x = ((event.clientX - centerX) / (rect.width / 2));
-      const y = -((event.clientY - centerY) / (rect.height / 2)); // Invert Y
-      
-      // Clamp values to [-1, 1]
-      const clampedX = Math.max(-1, Math.min(1, x));
-      const clampedY = Math.max(-1, Math.min(1, y));
-      
-      updateGamepadState({
-        [stickXKey]: clampedX,
-        [stickYKey]: clampedY
-      });
-    };
+    updateGamepadState(gamepadNum, neutralState);
   }, [updateGamepadState]);
-
-  const resetStick = useCallback((stickXKey: keyof GamepadState, stickYKey: keyof GamepadState) => {
-    return () => {
-      updateGamepadState({
-        [stickXKey]: 0,
-        [stickYKey]: 0
-      });
-    };
-  }, [updateGamepadState]);
+  // Get current gamepad state based on selection
+  const currentGamepadState = selectedGamepad === 1 ? gamepad1State : gamepad2State;
   
-  
-  // Keyboard event handling is now done in middleware, 
-  // but we'll simulate the visual state for demonstration
-  useEffect(() => {
-    if (!keyboardMappingState.enabled) return;
-
-    const pressedKeys = new Set<string>();
-    
-    const handleKeyDown = (event: KeyboardEvent) => {
-      pressedKeys.add(event.code);
-      updateGamepadStateFromKeyboard();
-    };
-
-    const handleKeyUp = (event: KeyboardEvent) => {
-      pressedKeys.delete(event.code);
-      updateGamepadStateFromKeyboard();
-    };
-
-    const updateGamepadStateFromKeyboard = () => {
-      const newState: GamepadState = { ...currentGamepadState };
-      const mapping = keyboardMappingState.mapping;
-      
-      // Handle stick movements (analog)
-      let leftStickX = 0;
-      let leftStickY = 0;
-      let rightStickX = 0;
-      let rightStickY = 0;
-      
-      if (pressedKeys.has(mapping.left_stick_left || '')) leftStickX -= 1;
-      if (pressedKeys.has(mapping.left_stick_right || '')) leftStickX += 1;
-      if (pressedKeys.has(mapping.left_stick_up || '')) leftStickY += 1;
-      if (pressedKeys.has(mapping.left_stick_down || '')) leftStickY -= 1;
-      
-      if (pressedKeys.has(mapping.right_stick_left || '')) rightStickX -= 1;
-      if (pressedKeys.has(mapping.right_stick_right || '')) rightStickX += 1;
-      if (pressedKeys.has(mapping.right_stick_up || '')) rightStickY += 1;
-      if (pressedKeys.has(mapping.right_stick_down || '')) rightStickY -= 1;
-      
-      newState.left_stick_x = leftStickX;
-      newState.left_stick_y = leftStickY;
-      newState.right_stick_x = rightStickX;
-      newState.right_stick_y = rightStickY;
-      
-      // Handle digital buttons
-      newState.dpad_up = pressedKeys.has(mapping.dpad_up || '');
-      newState.dpad_down = pressedKeys.has(mapping.dpad_down || '');
-      newState.dpad_left = pressedKeys.has(mapping.dpad_left || '');
-      newState.dpad_right = pressedKeys.has(mapping.dpad_right || '');
-      
-      newState.a = pressedKeys.has(mapping.a || '');
-      newState.b = pressedKeys.has(mapping.b || '');
-      newState.x = pressedKeys.has(mapping.x || '');
-      newState.y = pressedKeys.has(mapping.y || '');
-      
-      newState.guide = pressedKeys.has(mapping.guide || '');
-      newState.start = pressedKeys.has(mapping.start || '');
-      newState.back = pressedKeys.has(mapping.back || '');
-      
-      newState.left_bumper = pressedKeys.has(mapping.left_bumper || '');
-      newState.right_bumper = pressedKeys.has(mapping.right_bumper || '');
-      
-      newState.left_stick_button = pressedKeys.has(mapping.left_stick_button || '');
-      newState.right_stick_button = pressedKeys.has(mapping.right_stick_button || '');
-      
-      // Handle triggers (analog)
-      newState.left_trigger = pressedKeys.has(mapping.left_trigger || '') ? 1 : 0;
-      newState.right_trigger = pressedKeys.has(mapping.right_trigger || '') ? 1 : 0;
-      
-      if (mapping.touchpad) {
-        newState.touchpad = pressedKeys.has(mapping.touchpad);
-      }
-      
-      setCurrentGamepadState(newState);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [keyboardMappingState.enabled, keyboardMappingState.mapping, currentGamepadState]);
-
   const formatKeyName = (keyCode: string) => {
     if (!keyCode) return '';
     return keyCode.replace(/^Key/, '').replace(/^Arrow/, '').replace(/Left$|Right$/, '');
   };
 
+  // Create a single gamepad component
+  const renderGamepadControls = (gamepadNum: 1 | 2, gamepadState: GamepadState, isCompact = false) => (
+    <div className={clsx('space-y-4', isCompact && 'scale-90 origin-top')}>
+      {/* Gamepad Header */}
+      <div className="flex items-center justify-between">
+        <h3 className={clsx(
+          'font-semibold text-gray-800 dark:text-gray-200',
+          isCompact ? 'text-base' : 'text-lg'
+        )}>
+          Gamepad {gamepadNum}
+        </h3>
+        <div className="flex items-center space-x-2">
+          <span className={clsx(
+            'font-medium',
+            isCompact ? 'text-xs' : 'text-sm',
+            gamepadNum === 1 
+              ? (gamepadConnectionState.gamepad1Connected ? 'text-green-600' : 'text-red-600')
+              : (gamepadConnectionState.gamepad2Connected ? 'text-green-600' : 'text-red-600')
+          )}>
+            {gamepadNum === 1 
+              ? (gamepadConnectionState.gamepad1Connected ? 'HW Connected' : 'HW Disconnected')
+              : (gamepadConnectionState.gamepad2Connected ? 'HW Connected' : 'HW Disconnected')
+            }
+          </span>
+          <button
+            className={clsx(
+              'rounded bg-red-500 text-white hover:bg-red-600',
+              isCompact ? 'px-2 py-1 text-xs' : 'px-3 py-1 text-sm'
+            )}
+            onClick={() => resetGamepad(gamepadNum)}
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+
+      {/* Gamepad Layout */}
+      <div className={clsx(
+        'rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800',
+        isCompact ? 'p-4' : 'p-6'
+      )}>
+        <div className={clsx('flex flex-col', isCompact ? 'space-y-4' : 'space-y-6')}>
+          {/* Top Row - Bumpers and Triggers */}
+          <div className="flex justify-between">
+            <div className="flex space-x-2">
+              <GamepadButton
+                label="LB"
+                isActive={gamepadState.left_bumper}
+                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_bumper || '') : ''}
+                onClick={createButtonToggleHandler(gamepadNum, 'left_bumper')}
+                className={isCompact ? 'min-h-[50px] min-w-[50px]' : ''}
+              />
+              <GamepadButton
+                label="LT"
+                isActive={gamepadState.left_trigger > 0}
+                value={gamepadState.left_trigger}
+                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_trigger || '') : ''}
+                onClick={createButtonToggleHandler(gamepadNum, 'left_trigger')}
+                className={isCompact ? 'min-h-[50px] min-w-[50px]' : ''}
+              />
+            </div>
+            <div className="flex space-x-2">
+              <GamepadButton
+                label="RT"
+                isActive={gamepadState.right_trigger > 0}
+                value={gamepadState.right_trigger}
+                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_trigger || '') : ''}
+                onClick={createButtonToggleHandler(gamepadNum, 'right_trigger')}
+                className={isCompact ? 'min-h-[50px] min-w-[50px]' : ''}
+              />
+              <GamepadButton
+                label="RB"
+                isActive={gamepadState.right_bumper}
+                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_bumper || '') : ''}
+                onClick={createButtonToggleHandler(gamepadNum, 'right_bumper')}
+                className={isCompact ? 'min-h-[50px] min-w-[50px]' : ''}
+              />
+            </div>
+          </div>
+
+          {/* Middle Row - Sticks and D-pad/Face buttons */}
+          <div className="flex justify-between items-center">
+            {/* Left Side - Left Stick and D-pad */}
+            <div className={clsx('flex flex-col', isCompact ? 'space-y-3' : 'space-y-4')}>
+              <GamepadStick
+                x={gamepadState.left_stick_x}
+                y={gamepadState.left_stick_y}
+                label="L3"
+                upKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_stick_up || '') : ''}
+                downKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_stick_down || '') : ''}
+                leftKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_stick_left || '') : ''}
+                rightKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.left_stick_right || '') : ''}
+                isPressed={gamepadState.left_stick_button}
+                onStickButtonClick={createButtonToggleHandler(gamepadNum, 'left_stick_button')}
+                onStickMove={(x, y) => updateGamepadState(gamepadNum, { left_stick_x: x, left_stick_y: y })}
+                onStickReset={() => updateGamepadState(gamepadNum, { left_stick_x: 0, left_stick_y: 0 })}
+              />
+              
+              {/* D-pad */}
+              <div className="grid grid-cols-3 gap-1">
+                <div></div>
+                <GamepadButton
+                  label="↑"
+                  isActive={gamepadState.dpad_up}
+                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.dpad_up || '') : ''}
+                  onClick={createButtonToggleHandler(gamepadNum, 'dpad_up')}
+                  className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+                />
+                <div></div>
+                <GamepadButton
+                  label="←"
+                  isActive={gamepadState.dpad_left}
+                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.dpad_left || '') : ''}
+                  onClick={createButtonToggleHandler(gamepadNum, 'dpad_left')}
+                  className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+                />
+                <div></div>
+                <GamepadButton
+                  label="→"
+                  isActive={gamepadState.dpad_right}
+                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.dpad_right || '') : ''}
+                  onClick={createButtonToggleHandler(gamepadNum, 'dpad_right')}
+                  className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+                />
+                <div></div>
+                <GamepadButton
+                  label="↓"
+                  isActive={gamepadState.dpad_down}
+                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.dpad_down || '') : ''}
+                  onClick={createButtonToggleHandler(gamepadNum, 'dpad_down')}
+                  className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+                />
+                <div></div>
+              </div>
+            </div>
+
+            {/* Center - Control buttons */}
+            <div className={clsx('flex', isCompact ? 'space-x-2' : 'space-x-4')}>
+              <GamepadButton
+                label="Back"
+                isActive={gamepadState.back}
+                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.back || '') : ''}
+                onClick={createButtonToggleHandler(gamepadNum, 'back')}
+                className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+              />
+              <GamepadButton
+                label="Guide"
+                isActive={gamepadState.guide}
+                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.guide || '') : ''}
+                className={clsx('rounded-full', isCompact ? 'min-h-[40px] min-w-[40px]' : '')}
+                onClick={createButtonToggleHandler(gamepadNum, 'guide')}
+              />
+              <GamepadButton
+                label="Start"
+                isActive={gamepadState.start}
+                keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.start || '') : ''}
+                onClick={createButtonToggleHandler(gamepadNum, 'start')}
+                className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+              />
+            </div>
+
+            {/* Right Side - Face buttons and Right Stick */}
+            <div className={clsx('flex flex-col', isCompact ? 'space-y-3' : 'space-y-4')}>
+              {/* Face buttons */}
+              <div className="grid grid-cols-3 gap-1">
+                <div></div>
+                <GamepadButton
+                  label="Y"
+                  isActive={gamepadState.y}
+                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.y || '') : ''}
+                  onClick={createButtonToggleHandler(gamepadNum, 'y')}
+                  className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+                />
+                <div></div>
+                <GamepadButton
+                  label="X"
+                  isActive={gamepadState.x}
+                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.x || '') : ''}
+                  onClick={createButtonToggleHandler(gamepadNum, 'x')}
+                  className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+                />
+                <div></div>
+                <GamepadButton
+                  label="B"
+                  isActive={gamepadState.b}
+                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.b || '') : ''}
+                  onClick={createButtonToggleHandler(gamepadNum, 'b')}
+                  className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+                />
+                <div></div>
+                <GamepadButton
+                  label="A"
+                  isActive={gamepadState.a}
+                  keyBinding={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.a || '') : ''}
+                  onClick={createButtonToggleHandler(gamepadNum, 'a')}
+                  className={isCompact ? 'min-h-[40px] min-w-[40px]' : ''}
+                />
+                <div></div>
+              </div>
+              
+              <GamepadStick
+                x={gamepadState.right_stick_x}
+                y={gamepadState.right_stick_y}
+                label="R3"
+                upKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_stick_up || '') : ''}
+                downKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_stick_down || '') : ''}
+                leftKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_stick_left || '') : ''}
+                rightKey={gamepadNum === 1 ? formatKeyName(keyboardMappingState.mapping.right_stick_right || '') : ''}
+                isPressed={gamepadState.right_stick_button}
+                onStickButtonClick={createButtonToggleHandler(gamepadNum, 'right_stick_button')}
+                onStickMove={(x, y) => updateGamepadState(gamepadNum, { right_stick_x: x, right_stick_y: y })}
+                onStickReset={() => updateGamepadState(gamepadNum, { right_stick_x: 0, right_stick_y: 0 })}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <BaseView isUnlocked={isUnlocked}>
       <div className="flex items-center justify-between p-4">
         <BaseViewHeading isDraggable={isDraggable} className="mb-0 p-0">
-          Gamepad View
+          Dual Gamepad Controller
         </BaseViewHeading>
         <BaseViewIcons>
           <BaseViewIconButton
@@ -414,7 +554,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
       <BaseViewBody className="space-y-6">
         {/* Status */}
         <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
-          <span className="text-sm font-medium">Keyboard Mapping:</span>
+          <span className="text-sm font-medium">Keyboard Mapping (Gamepad 1 only):</span>
           <span className={clsx(
             'text-sm font-semibold',
             keyboardMappingState.enabled ? 'text-green-600' : 'text-gray-500'
@@ -425,265 +565,154 @@ const GamepadView: React.FC<GamepadViewProps> = ({
 
         {/* Usage Instructions */}
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-900">
-          <div className="font-medium text-blue-800 dark:text-blue-200 mb-1">Interactive Gamepad Controls</div>
+          <div className="font-medium text-blue-800 dark:text-blue-200 mb-1">Interactive Dual Gamepad Controls</div>
           <div className="text-blue-700 dark:text-blue-300 space-y-1">
             <div>• Click any button to toggle it on/off</div>
             <div>• Click analog sticks to set position, double-click to reset</div>
-            <div>• Click triggers/bumpers to activate them</div>
-            <div>• Use keyboard input or click controls - both work simultaneously</div>
+            <div>• Keyboard controls only work with Gamepad 1</div>
+            <div>• Use click controls for both gamepads</div>
+            <div>• Hardware gamepads override click controls when connected</div>
           </div>
         </div>
 
-        {/* Gamepad Layout */}
-        <div className="flex flex-col space-y-8">
-          {/* Top Row - Bumpers and Triggers */}
-          <div className="flex justify-between">
-            <div className="flex space-x-2">
-              <GamepadButton
-                label="LB"
-                isActive={currentGamepadState.left_bumper}
-                keyBinding={formatKeyName(keyboardMappingState.mapping.left_bumper || '')}
-                onClick={createButtonToggleHandler('left_bumper')}
-              />
-              <GamepadButton
-                label="LT"
-                isActive={currentGamepadState.left_trigger > 0}
-                value={currentGamepadState.left_trigger}
-                keyBinding={formatKeyName(keyboardMappingState.mapping.left_trigger || '')}
-                onClick={createButtonToggleHandler('left_trigger')}
-              />
-            </div>
-            <div className="flex space-x-2">
-              <GamepadButton
-                label="RT"
-                isActive={currentGamepadState.right_trigger > 0}
-                value={currentGamepadState.right_trigger}
-                keyBinding={formatKeyName(keyboardMappingState.mapping.right_trigger || '')}
-                onClick={createButtonToggleHandler('right_trigger')}
-              />
-              <GamepadButton
-                label="RB"
-                isActive={currentGamepadState.right_bumper}
-                keyBinding={formatKeyName(keyboardMappingState.mapping.right_bumper || '')}
-                onClick={createButtonToggleHandler('right_bumper')}
-              />
-            </div>
+        {/* Gamepad Selection Tabs */}
+        <div className="flex items-center justify-between">
+          <div className="flex rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+            <button
+              className={clsx(
+                'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                selectedGamepad === 1
+                  ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              )}
+              onClick={() => setSelectedGamepad(1)}
+            >
+              Gamepad 1
+              {gamepadConnectionState.gamepad1Connected && (
+                <span className="ml-2 inline-block h-2 w-2 rounded-full bg-green-500"></span>
+              )}
+            </button>
+            <button
+              className={clsx(
+                'flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                selectedGamepad === 2
+                  ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              )}
+              onClick={() => setSelectedGamepad(2)}
+            >
+              Gamepad 2
+              {gamepadConnectionState.gamepad2Connected && (
+                <span className="ml-2 inline-block h-2 w-2 rounded-full bg-green-500"></span>
+              )}
+            </button>
           </div>
 
-          {/* Middle Row - Sticks and D-pad/Face buttons */}
-          <div className="flex justify-between items-center">
-            {/* Left Side - Left Stick and D-pad */}
-            <div className="flex flex-col space-y-4">
-              <GamepadStick
-                x={currentGamepadState.left_stick_x}
-                y={currentGamepadState.left_stick_y}
-                label="L3"
-                upKey={formatKeyName(keyboardMappingState.mapping.left_stick_up || '')}
-                downKey={formatKeyName(keyboardMappingState.mapping.left_stick_down || '')}
-                leftKey={formatKeyName(keyboardMappingState.mapping.left_stick_left || '')}
-                rightKey={formatKeyName(keyboardMappingState.mapping.left_stick_right || '')}
-                isPressed={currentGamepadState.left_stick_button}
-                onStickButtonClick={createButtonToggleHandler('left_stick_button')}
-                onStickMove={(x, y) => updateGamepadState({ left_stick_x: x, left_stick_y: y })}
-                onStickReset={() => updateGamepadState({ left_stick_x: 0, left_stick_y: 0 })}
-              />
-              
-              {/* D-pad */}
-              <div className="grid grid-cols-3 gap-1">
-                <div></div>
-                <GamepadButton
-                  label="↑"
-                  isActive={currentGamepadState.dpad_up}
-                  keyBinding={formatKeyName(keyboardMappingState.mapping.dpad_up || '')}
-                  onClick={createButtonToggleHandler('dpad_up')}
-                />
-                <div></div>
-                <GamepadButton
-                  label="←"
-                  isActive={currentGamepadState.dpad_left}
-                  keyBinding={formatKeyName(keyboardMappingState.mapping.dpad_left || '')}
-                  onClick={createButtonToggleHandler('dpad_left')}
-                />
-                <div></div>
-                <GamepadButton
-                  label="→"
-                  isActive={currentGamepadState.dpad_right}
-                  keyBinding={formatKeyName(keyboardMappingState.mapping.dpad_right || '')}
-                  onClick={createButtonToggleHandler('dpad_right')}
-                />
-                <div></div>
-                <GamepadButton
-                  label="↓"
-                  isActive={currentGamepadState.dpad_down}
-                  keyBinding={formatKeyName(keyboardMappingState.mapping.dpad_down || '')}
-                  onClick={createButtonToggleHandler('dpad_down')}
-                />
-                <div></div>
-              </div>
-            </div>
-
-            {/* Center - Control buttons */}
-            <div className="flex space-x-4">
-              <GamepadButton
-                label="Back"
-                isActive={currentGamepadState.back}
-                keyBinding={formatKeyName(keyboardMappingState.mapping.back || '')}
-                onClick={createButtonToggleHandler('back')}
-              />
-              <GamepadButton
-                label="Guide"
-                isActive={currentGamepadState.guide}
-                keyBinding={formatKeyName(keyboardMappingState.mapping.guide || '')}
-                className="rounded-full"
-                onClick={createButtonToggleHandler('guide')}
-              />
-              <GamepadButton
-                label="Start"
-                isActive={currentGamepadState.start}
-                keyBinding={formatKeyName(keyboardMappingState.mapping.start || '')}
-                onClick={createButtonToggleHandler('start')}
-              />
-            </div>
-
-            {/* Right Side - Face buttons and Right Stick */}
-            <div className="flex flex-col space-y-4">
-              {/* Face buttons */}
-              <div className="grid grid-cols-3 gap-1">
-                <div></div>
-                <GamepadButton
-                  label="Y"
-                  isActive={currentGamepadState.y}
-                  keyBinding={formatKeyName(keyboardMappingState.mapping.y || '')}
-                  onClick={createButtonToggleHandler('y')}
-                />
-                <div></div>
-                <GamepadButton
-                  label="X"
-                  isActive={currentGamepadState.x}
-                  keyBinding={formatKeyName(keyboardMappingState.mapping.x || '')}
-                  onClick={createButtonToggleHandler('x')}
-                />
-                <div></div>
-                <GamepadButton
-                  label="B"
-                  isActive={currentGamepadState.b}
-                  keyBinding={formatKeyName(keyboardMappingState.mapping.b || '')}
-                  onClick={createButtonToggleHandler('b')}
-                />
-                <div></div>
-                <GamepadButton
-                  label="A"
-                  isActive={currentGamepadState.a}
-                  keyBinding={formatKeyName(keyboardMappingState.mapping.a || '')}
-                  onClick={createButtonToggleHandler('a')}
-                />
-                <div></div>
-              </div>
-              
-              <GamepadStick
-                x={currentGamepadState.right_stick_x}
-                y={currentGamepadState.right_stick_y}
-                label="R3"
-                upKey={formatKeyName(keyboardMappingState.mapping.right_stick_up || '')}
-                downKey={formatKeyName(keyboardMappingState.mapping.right_stick_down || '')}
-                leftKey={formatKeyName(keyboardMappingState.mapping.right_stick_left || '')}
-                rightKey={formatKeyName(keyboardMappingState.mapping.right_stick_right || '')}
-                isPressed={currentGamepadState.right_stick_button}
-                onStickButtonClick={createButtonToggleHandler('right_stick_button')}
-                onStickMove={(x, y) => updateGamepadState({ right_stick_x: x, right_stick_y: y })}
-                onStickReset={() => updateGamepadState({ right_stick_x: 0, right_stick_y: 0 })}
-              />
-            </div>
+          {/* View Mode Toggle */}
+          <div className="flex rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+            <button
+              className={clsx(
+                'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                viewMode === 'single'
+                  ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              )}
+              onClick={() => setViewMode('single')}
+            >
+              Single View
+            </button>
+            <button
+              className={clsx(
+                'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                viewMode === 'dual'
+                  ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              )}
+              onClick={() => setViewMode('dual')}
+            >
+              Side-by-Side
+            </button>
           </div>
         </div>
 
-        {/* Connection Status */}
-        <div className="mt-6 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-          <h4 className="mb-2 font-medium">Hardware Gamepad Status</h4>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center justify-between">
-              <span>Gamepad 1:</span>
-              <span className={clsx(
-                'font-semibold',
-                gamepadConnectionState.gamepad1Connected ? 'text-green-600' : 'text-red-600'
-              )}>
-                {gamepadConnectionState.gamepad1Connected ? 'Connected' : 'Disconnected'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Gamepad 2:</span>
-              <span className={clsx(
-                'font-semibold',
-                gamepadConnectionState.gamepad2Connected ? 'text-green-600' : 'text-red-600'
-              )}>
-                {gamepadConnectionState.gamepad2Connected ? 'Connected' : 'Disconnected'}
-              </span>
-            </div>
+        {/* Gamepad Controls */}
+        {viewMode === 'single' ? (
+          renderGamepadControls(selectedGamepad, currentGamepadState, false)
+        ) : (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {renderGamepadControls(1, gamepad1State, true)}
+            {renderGamepadControls(2, gamepad2State, true)}
           </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="flex justify-center space-x-4">
+          <button
+            className="rounded bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
+            onClick={() => resetGamepad(1)}
+          >
+            Reset Gamepad 1
+          </button>
+          <button
+            className="rounded bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
+            onClick={() => resetGamepad(2)}
+          >
+            Reset Gamepad 2
+          </button>
+          <button
+            className="rounded bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-600"
+            onClick={() => {
+              resetGamepad(1);
+              resetGamepad(2);
+            }}
+          >
+            Reset Both
+          </button>
         </div>
 
         {/* Settings Panel */}
         {showSettings && (
           <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-            <h4 className="mb-3 font-medium">Gamepad Control Settings</h4>
+            <h4 className="mb-3 font-medium">Dual Gamepad Control Settings</h4>
             <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
               <p>
-                <strong>Keyboard Mapping:</strong> Control gamepad inputs using your keyboard. 
+                <strong>Keyboard Mapping:</strong> Control Gamepad 1 inputs using your keyboard. 
                 This is useful for testing robot controls without a physical gamepad.
               </p>
               <p>
-                <strong>Click Controls:</strong> Click any button or stick in the gamepad visualization 
-                to send commands to the robot directly. This works alongside keyboard mapping.
+                <strong>Click Controls:</strong> Click any button or stick in either gamepad visualization 
+                to send commands to the robot directly. Works for both gamepads.
               </p>
               <p>
-                <strong>Both methods work simultaneously</strong> - you can use keyboard shortcuts and 
-                click controls at the same time for maximum flexibility.
+                <strong>Hardware Gamepads:</strong> Connect physical gamepads using Start+A for Gamepad 1 
+                or Start+B for Gamepad 2. Hardware input will override virtual controls.
+              </p>
+              <p>
+                <strong>Dual Control:</strong> Both gamepads work independently - you can control 
+                one with keyboard/clicks and another with hardware, or use any combination.
               </p>
             </div>
-            <div className="mt-3 flex space-x-2">
+            <div className="mt-4 grid grid-cols-2 gap-3">
               <button
-                className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
+                className="rounded bg-blue-500 px-3 py-2 text-sm text-white hover:bg-blue-600"
                 onClick={() => dispatch(setKeyboardMapping(DEFAULT_KEYBOARD_MAPPING))}
               >
                 Reset Keyboard Mapping
               </button>
               <button
-                className="rounded bg-green-500 px-3 py-1 text-sm text-white hover:bg-green-600"
+                className="rounded bg-green-500 px-3 py-2 text-sm text-white hover:bg-green-600"
                 onClick={() => {
-                  // Reset all gamepad controls to neutral state
-                  const neutralState: GamepadState = {
-                    left_stick_x: 0,
-                    left_stick_y: 0,
-                    right_stick_x: 0,
-                    right_stick_y: 0,
-                    dpad_up: false,
-                    dpad_down: false,
-                    dpad_left: false,
-                    dpad_right: false,
-                    a: false,
-                    b: false,
-                    x: false,
-                    y: false,
-                    guide: false,
-                    start: false,
-                    back: false,
-                    left_bumper: false,
-                    right_bumper: false,
-                    left_stick_button: false,
-                    right_stick_button: false,
-                    left_trigger: 0,
-                    right_trigger: 0,
-                  };
-                  updateGamepadState(neutralState);
+                  resetGamepad(1);
+                  resetGamepad(2);
                 }}
               >
                 Reset All Controls
               </button>
               <button
-                className="rounded bg-gray-500 px-3 py-1 text-sm text-white hover:bg-gray-600"
+                className="col-span-2 rounded bg-gray-500 px-3 py-2 text-sm text-white hover:bg-gray-600"
                 onClick={() => setShowSettings(false)}
               >
-                Close
+                Close Settings
               </button>
             </div>
           </div>
