@@ -14,6 +14,7 @@ import { RootState } from '@/store/reducers';
 import { GamepadState } from '@/store/types';
 import { KeyboardMapping, DEFAULT_KEYBOARD_MAPPING } from '@/store/types/keyboardMapping';
 import { setKeyboardMapping, toggleKeyboardMappingEnabled } from '@/store/actions/keyboardMapping';
+import { receiveGamepadState } from '@/store/actions/gamepad';
 
 import { ReactComponent as GamepadIcon } from '@/assets/icons/gamepad.svg';
 import { ReactComponent as SettingsIcon } from '@/assets/icons/settings.svg';
@@ -45,13 +46,14 @@ const GamepadButton: React.FC<GamepadButtonProps> = ({
       className={clsx(
         'flex flex-col items-center justify-center rounded-md border-2 p-2 text-xs font-medium transition-all',
         'min-h-[60px] min-w-[60px] relative',
+        'hover:scale-105 active:scale-95',
         isActive 
           ? 'border-blue-500 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
-          : 'border-gray-300 bg-gray-50 text-gray-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400',
-        'hover:border-gray-400 dark:hover:border-gray-500',
+          : 'border-gray-300 bg-gray-50 text-gray-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:border-blue-400 hover:bg-blue-50 dark:hover:border-blue-500 dark:hover:bg-blue-900/20',
         className
       )}
       onClick={onClick}
+      title={keyBinding ? `Click to toggle, or press '${keyBinding}'` : 'Click to toggle'}
     >
       <span className="font-semibold">{displayValue}</span>
       {keyBinding && (
@@ -73,6 +75,8 @@ interface StickProps {
   rightKey?: string;
   isPressed?: boolean;
   onStickButtonClick?: () => void;
+  onStickMove?: (x: number, y: number) => void;
+  onStickReset?: () => void;
 }
 
 const GamepadStick: React.FC<StickProps> = ({ 
@@ -84,17 +88,52 @@ const GamepadStick: React.FC<StickProps> = ({
   leftKey, 
   rightKey,
   isPressed,
-  onStickButtonClick 
+  onStickButtonClick,
+  onStickMove,
+  onStickReset
 }) => {
   const normalizedX = (x + 1) * 50; // Convert from -1,1 to 0,100
   const normalizedY = (1 - y) * 50; // Convert from -1,1 to 0,100 (invert Y)
   
+  const handleStickClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!onStickMove) return;
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const newX = ((event.clientX - centerX) / (rect.width / 2));
+    const newY = -((event.clientY - centerY) / (rect.height / 2)); // Invert Y
+    
+    // Clamp values to [-1, 1] and apply deadzone
+    const deadzone = 0.1;
+    let clampedX = Math.max(-1, Math.min(1, newX));
+    let clampedY = Math.max(-1, Math.min(1, newY));
+    
+    // Apply deadzone
+    if (Math.abs(clampedX) < deadzone) clampedX = 0;
+    if (Math.abs(clampedY) < deadzone) clampedY = 0;
+    
+    onStickMove(clampedX, clampedY);
+  };
+
+  const handleDoubleClick = () => {
+    if (onStickReset) {
+      onStickReset();
+    }
+  };
+  
   return (
     <div className="flex flex-col items-center space-y-2">
-      <div className="relative h-24 w-24 rounded-full border-2 border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800">
+      <div 
+        className="relative h-24 w-24 rounded-full border-2 border-gray-300 bg-gray-100 dark:border-gray-600 dark:bg-gray-800 cursor-pointer hover:border-blue-400 dark:hover:border-blue-500"
+        onClick={handleStickClick}
+        onDoubleClick={handleDoubleClick}
+        title="Click to move stick, double-click to reset"
+      >
         <div
           className={clsx(
-            'absolute h-4 w-4 rounded-full transition-all',
+            'absolute h-4 w-4 rounded-full transition-all pointer-events-none',
             isPressed 
               ? 'bg-blue-600 dark:bg-blue-400' 
               : 'bg-gray-600 dark:bg-gray-400'
@@ -105,37 +144,37 @@ const GamepadStick: React.FC<StickProps> = ({
           }}
         />
         {/* Crosshair */}
-        <div className="absolute left-1/2 top-1/2 h-0.5 w-full -translate-x-1/2 -translate-y-1/2 bg-gray-300 dark:bg-gray-600" />
-        <div className="absolute left-1/2 top-1/2 h-full w-0.5 -translate-x-1/2 -translate-y-1/2 bg-gray-300 dark:bg-gray-600" />
+        <div className="absolute left-1/2 top-1/2 h-0.5 w-full -translate-x-1/2 -translate-y-1/2 bg-gray-300 dark:bg-gray-600 pointer-events-none" />
+        <div className="absolute left-1/2 top-1/2 h-full w-0.5 -translate-x-1/2 -translate-y-1/2 bg-gray-300 dark:bg-gray-600 pointer-events-none" />
         
         {/* Key bindings around the stick */}
         {upKey && (
-          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500">
+          <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 pointer-events-none">
             {upKey}
           </span>
         )}
         {downKey && (
-          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-gray-500">
+          <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-gray-500 pointer-events-none">
             {downKey}
           </span>
         )}
         {leftKey && (
-          <span className="absolute -left-8 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+          <span className="absolute -left-8 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
             {leftKey}
           </span>
         )}
         {rightKey && (
-          <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+          <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-xs text-gray-500 pointer-events-none">
             {rightKey}
           </span>
         )}
       </div>
       <button
         className={clsx(
-          'rounded px-2 py-1 text-xs',
+          'rounded px-2 py-1 text-xs transition-colors',
           isPressed
             ? 'bg-blue-500 text-white'
-            : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+            : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
         )}
         onClick={onStickButtonClick}
       >
@@ -180,6 +219,82 @@ const GamepadView: React.FC<GamepadViewProps> = ({
     left_trigger: 0,
     right_trigger: 0,
   });
+
+  // Function to dispatch gamepad state changes
+  const updateGamepadState = useCallback((newState: Partial<GamepadState>) => {
+    const updatedState = { ...currentGamepadState, ...newState };
+    setCurrentGamepadState(updatedState);
+    
+    // Dispatch to Redux store to send to the robot
+    dispatch(receiveGamepadState(updatedState, {
+      left_stick_x: 0,
+      left_stick_y: 0,
+      right_stick_x: 0,
+      right_stick_y: 0,
+      dpad_up: false,
+      dpad_down: false,
+      dpad_left: false,
+      dpad_right: false,
+      a: false,
+      b: false,
+      x: false,
+      y: false,
+      guide: false,
+      start: false,
+      back: false,
+      left_bumper: false,
+      right_bumper: false,
+      left_stick_button: false,
+      right_stick_button: false,
+      left_trigger: 0,
+      right_trigger: 0,
+    }));
+  }, [currentGamepadState, dispatch]);
+
+  // Button press handlers
+  const createButtonHandler = useCallback((buttonKey: keyof GamepadState, value: boolean | number = true) => {
+    return () => updateGamepadState({ [buttonKey]: value });
+  }, [updateGamepadState]);
+
+  const createButtonToggleHandler = useCallback((buttonKey: keyof GamepadState) => {
+    return () => {
+      const currentValue = currentGamepadState[buttonKey];
+      const newValue = typeof currentValue === 'number' 
+        ? (currentValue > 0 ? 0 : 1) 
+        : !currentValue;
+      updateGamepadState({ [buttonKey]: newValue });
+    };
+  }, [currentGamepadState, updateGamepadState]);
+
+  // Stick interaction handlers
+  const createStickHandler = useCallback((stickXKey: keyof GamepadState, stickYKey: keyof GamepadState) => {
+    return (event: React.MouseEvent<HTMLDivElement>) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      const x = ((event.clientX - centerX) / (rect.width / 2));
+      const y = -((event.clientY - centerY) / (rect.height / 2)); // Invert Y
+      
+      // Clamp values to [-1, 1]
+      const clampedX = Math.max(-1, Math.min(1, x));
+      const clampedY = Math.max(-1, Math.min(1, y));
+      
+      updateGamepadState({
+        [stickXKey]: clampedX,
+        [stickYKey]: clampedY
+      });
+    };
+  }, [updateGamepadState]);
+
+  const resetStick = useCallback((stickXKey: keyof GamepadState, stickYKey: keyof GamepadState) => {
+    return () => {
+      updateGamepadState({
+        [stickXKey]: 0,
+        [stickYKey]: 0
+      });
+    };
+  }, [updateGamepadState]);
   
   
   // Keyboard event handling is now done in middleware, 
@@ -308,6 +423,17 @@ const GamepadView: React.FC<GamepadViewProps> = ({
           </span>
         </div>
 
+        {/* Usage Instructions */}
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-800 dark:bg-blue-900">
+          <div className="font-medium text-blue-800 dark:text-blue-200 mb-1">Interactive Gamepad Controls</div>
+          <div className="text-blue-700 dark:text-blue-300 space-y-1">
+            <div>• Click any button to toggle it on/off</div>
+            <div>• Click analog sticks to set position, double-click to reset</div>
+            <div>• Click triggers/bumpers to activate them</div>
+            <div>• Use keyboard input or click controls - both work simultaneously</div>
+          </div>
+        </div>
+
         {/* Gamepad Layout */}
         <div className="flex flex-col space-y-8">
           {/* Top Row - Bumpers and Triggers */}
@@ -317,12 +443,14 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 label="LB"
                 isActive={currentGamepadState.left_bumper}
                 keyBinding={formatKeyName(keyboardMappingState.mapping.left_bumper || '')}
+                onClick={createButtonToggleHandler('left_bumper')}
               />
               <GamepadButton
                 label="LT"
                 isActive={currentGamepadState.left_trigger > 0}
                 value={currentGamepadState.left_trigger}
                 keyBinding={formatKeyName(keyboardMappingState.mapping.left_trigger || '')}
+                onClick={createButtonToggleHandler('left_trigger')}
               />
             </div>
             <div className="flex space-x-2">
@@ -331,11 +459,13 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 isActive={currentGamepadState.right_trigger > 0}
                 value={currentGamepadState.right_trigger}
                 keyBinding={formatKeyName(keyboardMappingState.mapping.right_trigger || '')}
+                onClick={createButtonToggleHandler('right_trigger')}
               />
               <GamepadButton
                 label="RB"
                 isActive={currentGamepadState.right_bumper}
                 keyBinding={formatKeyName(keyboardMappingState.mapping.right_bumper || '')}
+                onClick={createButtonToggleHandler('right_bumper')}
               />
             </div>
           </div>
@@ -353,6 +483,9 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 leftKey={formatKeyName(keyboardMappingState.mapping.left_stick_left || '')}
                 rightKey={formatKeyName(keyboardMappingState.mapping.left_stick_right || '')}
                 isPressed={currentGamepadState.left_stick_button}
+                onStickButtonClick={createButtonToggleHandler('left_stick_button')}
+                onStickMove={(x, y) => updateGamepadState({ left_stick_x: x, left_stick_y: y })}
+                onStickReset={() => updateGamepadState({ left_stick_x: 0, left_stick_y: 0 })}
               />
               
               {/* D-pad */}
@@ -362,24 +495,28 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                   label="↑"
                   isActive={currentGamepadState.dpad_up}
                   keyBinding={formatKeyName(keyboardMappingState.mapping.dpad_up || '')}
+                  onClick={createButtonToggleHandler('dpad_up')}
                 />
                 <div></div>
                 <GamepadButton
                   label="←"
                   isActive={currentGamepadState.dpad_left}
                   keyBinding={formatKeyName(keyboardMappingState.mapping.dpad_left || '')}
+                  onClick={createButtonToggleHandler('dpad_left')}
                 />
                 <div></div>
                 <GamepadButton
                   label="→"
                   isActive={currentGamepadState.dpad_right}
                   keyBinding={formatKeyName(keyboardMappingState.mapping.dpad_right || '')}
+                  onClick={createButtonToggleHandler('dpad_right')}
                 />
                 <div></div>
                 <GamepadButton
                   label="↓"
                   isActive={currentGamepadState.dpad_down}
                   keyBinding={formatKeyName(keyboardMappingState.mapping.dpad_down || '')}
+                  onClick={createButtonToggleHandler('dpad_down')}
                 />
                 <div></div>
               </div>
@@ -391,17 +528,20 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 label="Back"
                 isActive={currentGamepadState.back}
                 keyBinding={formatKeyName(keyboardMappingState.mapping.back || '')}
+                onClick={createButtonToggleHandler('back')}
               />
               <GamepadButton
                 label="Guide"
                 isActive={currentGamepadState.guide}
                 keyBinding={formatKeyName(keyboardMappingState.mapping.guide || '')}
                 className="rounded-full"
+                onClick={createButtonToggleHandler('guide')}
               />
               <GamepadButton
                 label="Start"
                 isActive={currentGamepadState.start}
                 keyBinding={formatKeyName(keyboardMappingState.mapping.start || '')}
+                onClick={createButtonToggleHandler('start')}
               />
             </div>
 
@@ -414,24 +554,28 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                   label="Y"
                   isActive={currentGamepadState.y}
                   keyBinding={formatKeyName(keyboardMappingState.mapping.y || '')}
+                  onClick={createButtonToggleHandler('y')}
                 />
                 <div></div>
                 <GamepadButton
                   label="X"
                   isActive={currentGamepadState.x}
                   keyBinding={formatKeyName(keyboardMappingState.mapping.x || '')}
+                  onClick={createButtonToggleHandler('x')}
                 />
                 <div></div>
                 <GamepadButton
                   label="B"
                   isActive={currentGamepadState.b}
                   keyBinding={formatKeyName(keyboardMappingState.mapping.b || '')}
+                  onClick={createButtonToggleHandler('b')}
                 />
                 <div></div>
                 <GamepadButton
                   label="A"
                   isActive={currentGamepadState.a}
                   keyBinding={formatKeyName(keyboardMappingState.mapping.a || '')}
+                  onClick={createButtonToggleHandler('a')}
                 />
                 <div></div>
               </div>
@@ -445,6 +589,9 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 leftKey={formatKeyName(keyboardMappingState.mapping.right_stick_left || '')}
                 rightKey={formatKeyName(keyboardMappingState.mapping.right_stick_right || '')}
                 isPressed={currentGamepadState.right_stick_button}
+                onStickButtonClick={createButtonToggleHandler('right_stick_button')}
+                onStickMove={(x, y) => updateGamepadState({ right_stick_x: x, right_stick_y: y })}
+                onStickReset={() => updateGamepadState({ right_stick_x: 0, right_stick_y: 0 })}
               />
             </div>
           </div>
@@ -478,17 +625,59 @@ const GamepadView: React.FC<GamepadViewProps> = ({
         {/* Settings Panel */}
         {showSettings && (
           <div className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
-            <h4 className="mb-3 font-medium">Keyboard Mapping Settings</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Keyboard mapping allows you to control gamepad inputs using your keyboard. 
-              This is useful for testing robot controls without a physical gamepad.
-            </p>
+            <h4 className="mb-3 font-medium">Gamepad Control Settings</h4>
+            <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+              <p>
+                <strong>Keyboard Mapping:</strong> Control gamepad inputs using your keyboard. 
+                This is useful for testing robot controls without a physical gamepad.
+              </p>
+              <p>
+                <strong>Click Controls:</strong> Click any button or stick in the gamepad visualization 
+                to send commands to the robot directly. This works alongside keyboard mapping.
+              </p>
+              <p>
+                <strong>Both methods work simultaneously</strong> - you can use keyboard shortcuts and 
+                click controls at the same time for maximum flexibility.
+              </p>
+            </div>
             <div className="mt-3 flex space-x-2">
               <button
                 className="rounded bg-blue-500 px-3 py-1 text-sm text-white hover:bg-blue-600"
                 onClick={() => dispatch(setKeyboardMapping(DEFAULT_KEYBOARD_MAPPING))}
               >
-                Reset to Default
+                Reset Keyboard Mapping
+              </button>
+              <button
+                className="rounded bg-green-500 px-3 py-1 text-sm text-white hover:bg-green-600"
+                onClick={() => {
+                  // Reset all gamepad controls to neutral state
+                  const neutralState: GamepadState = {
+                    left_stick_x: 0,
+                    left_stick_y: 0,
+                    right_stick_x: 0,
+                    right_stick_y: 0,
+                    dpad_up: false,
+                    dpad_down: false,
+                    dpad_left: false,
+                    dpad_right: false,
+                    a: false,
+                    b: false,
+                    x: false,
+                    y: false,
+                    guide: false,
+                    start: false,
+                    back: false,
+                    left_bumper: false,
+                    right_bumper: false,
+                    left_stick_button: false,
+                    right_stick_button: false,
+                    left_trigger: 0,
+                    right_trigger: 0,
+                  };
+                  updateGamepadState(neutralState);
+                }}
+              >
+                Reset All Controls
               </button>
               <button
                 className="rounded bg-gray-500 px-3 py-1 text-sm text-white hover:bg-gray-600"
