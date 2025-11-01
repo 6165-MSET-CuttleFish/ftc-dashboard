@@ -40,10 +40,6 @@ export interface KeyboardMapping {
   touchpad?: string;
 }
 
-export interface KeyboardToGamepadState {
-  [key: string]: boolean | number;
-}
-
 export const DEFAULT_KEYBOARD_MAPPING: KeyboardMapping = {
   // WASD for left stick
   left_stick_up: 'KeyW',

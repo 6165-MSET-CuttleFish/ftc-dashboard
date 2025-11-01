@@ -65,7 +65,6 @@ const GamepadView: React.FC<GamepadViewProps> = ({
       <GamepadHeader
         isDraggable={isDraggable}
         keyboardMappingEnabled={keyboardMappingState.enabled}
-        showSettings={showSettings}
         onToggleKeyboardMapping={() => dispatch(toggleKeyboardMappingEnabled(!keyboardMappingState.enabled))}
         onToggleSettings={() => setShowSettings(!showSettings)}
       />

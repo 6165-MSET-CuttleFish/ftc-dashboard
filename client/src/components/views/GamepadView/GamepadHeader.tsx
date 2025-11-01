@@ -1,8 +1,7 @@
 import React from 'react';
 import clsx from 'clsx';
-import BaseView, {
+import {
   BaseViewHeading,
-  BaseViewHeadingProps,
   BaseViewIcons,
   BaseViewIconButton,
 } from '../BaseView';
@@ -12,7 +11,6 @@ import { ReactComponent as SettingsIcon } from '@/assets/icons/settings.svg';
 interface GamepadHeaderProps {
   isDraggable: boolean;
   keyboardMappingEnabled: boolean;
-  showSettings: boolean;
   onToggleKeyboardMapping: () => void;
   onToggleSettings: () => void;
 }
@@ -20,7 +18,6 @@ interface GamepadHeaderProps {
 export const GamepadHeader: React.FC<GamepadHeaderProps> = ({
   isDraggable,
   keyboardMappingEnabled,
-  showSettings,
   onToggleKeyboardMapping,
   onToggleSettings,
 }) => {

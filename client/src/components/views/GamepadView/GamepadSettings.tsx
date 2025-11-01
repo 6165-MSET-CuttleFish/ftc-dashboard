@@ -1,5 +1,4 @@
 import React from 'react';
-import { DEFAULT_KEYBOARD_MAPPING } from '@/store/types/keyboardMapping';
 
 interface GamepadSettingsProps {
   onResetKeyboardMapping: () => void;
