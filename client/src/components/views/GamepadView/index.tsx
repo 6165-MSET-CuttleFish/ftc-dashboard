@@ -44,11 +44,14 @@ const GamepadView: React.FC<GamepadViewProps> = ({
     resetGamepad,
   } = useGamepadState();
 
+  // Disable all virtual controls if any hardware gamepad is connected
+  const anyHardwareConnected = gamepadConnectionState.gamepad1Connected || gamepadConnectionState.gamepad2Connected;
+
   // Use keyboardTargetGamepad when in both mode, otherwise use selected gamepad
   const keyboardTarget = selectedGamepad === 'both' ? keyboardTargetGamepad : selectedGamepad;
 
   useKeyboardControls({
-    enabled: keyboardMappingState.enabled,
+    enabled: keyboardMappingState.enabled && !anyHardwareConnected,
     mapping: keyboardMappingState.mapping,
     keyboardTarget: keyboardTarget,
     updateGamepadState,
@@ -69,13 +72,22 @@ const GamepadView: React.FC<GamepadViewProps> = ({
         <BaseViewIcons>
           <BaseViewIconButton
             onClick={handleToggleKeyboard}
+            disabled={anyHardwareConnected}
             className={clsx(
               'transition-colors',
-              keyboardMappingState.enabled 
-                ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+              anyHardwareConnected
+                ? 'opacity-50 cursor-not-allowed'
+                : keyboardMappingState.enabled 
+                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  : 'hover:bg-gray-200 dark:hover:bg-gray-700'
             )}
-            title={keyboardMappingState.enabled ? 'Disable keyboard controls' : 'Enable keyboard controls'}
+            title={
+              anyHardwareConnected 
+                ? 'Keyboard controls disabled when hardware gamepad is connected'
+                : keyboardMappingState.enabled 
+                  ? 'Disable keyboard controls' 
+                  : 'Enable keyboard controls'
+            }
           >
             <GamepadIcon className="h-5 w-5" />
           </BaseViewIconButton>
@@ -121,7 +133,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
         </div>
 
         {/* Keyboard Target Selector (only shown in Both mode) */}
-        {selectedGamepad === 'both' && keyboardMappingState.enabled && (
+        {selectedGamepad === 'both' && keyboardMappingState.enabled && !anyHardwareConnected && (
           <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
             <GamepadIcon className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
             <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">
@@ -153,6 +165,15 @@ const GamepadView: React.FC<GamepadViewProps> = ({
             </div>
           </div>
         )}
+        
+        {/* Hardware Connected Warning */}
+        {anyHardwareConnected && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+            <span className="text-xs text-green-700 dark:text-green-300 font-medium">
+              ● Hardware gamepad connected - UI and keyboard controls are disabled
+            </span>
+          </div>
+        )}
 
         {/* Gamepad Controls */}
         {selectedGamepad === 'both' ? (
@@ -171,6 +192,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 createButtonToggleHandler={createButtonToggleHandler}
                 updateGamepadState={updateGamepadState}
                 resetGamepad={resetGamepad}
+                anyHardwareConnected={anyHardwareConnected}
               />
             </div>
             <div>
@@ -187,6 +209,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
                 createButtonToggleHandler={createButtonToggleHandler}
                 updateGamepadState={updateGamepadState}
                 resetGamepad={resetGamepad}
+                anyHardwareConnected={anyHardwareConnected}
               />
             </div>
           </div>
@@ -205,6 +228,7 @@ const GamepadView: React.FC<GamepadViewProps> = ({
             createButtonToggleHandler={createButtonToggleHandler}
             updateGamepadState={updateGamepadState}
             resetGamepad={resetGamepad}
+            anyHardwareConnected={anyHardwareConnected}
           />
         )}
       </BaseViewBody>

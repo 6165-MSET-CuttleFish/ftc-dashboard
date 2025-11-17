@@ -16,6 +16,7 @@ interface GamepadControlsProps {
   createButtonToggleHandler: (gamepadNum: 1 | 2, buttonKey: keyof GamepadState) => () => void;
   updateGamepadState: (gamepadNum: 1 | 2, newState: Partial<GamepadState>) => void;
   resetGamepad: (gamepadNum: 1 | 2) => void;
+  anyHardwareConnected: boolean;
 }
 
 export const GamepadControls: React.FC<GamepadControlsProps> = ({
@@ -28,25 +29,46 @@ export const GamepadControls: React.FC<GamepadControlsProps> = ({
   createButtonToggleHandler,
   updateGamepadState,
   resetGamepad,
+  anyHardwareConnected,
 }) => {
   const showKeyBindings = gamepadNum === keyboardTarget;
 
-  // Helper to create press handler (set button to true)
+  // Helper to create press handler (set button to true) - disabled if hardware connected
   const createButtonPressHandler = (buttonKey: keyof GamepadState) => () => {
+    if (anyHardwareConnected) return;
     const currentValue = gamepadState[buttonKey];
     const newValue = typeof currentValue === 'number' ? 1 : true;
     updateGamepadState(gamepadNum, { [buttonKey]: newValue });
   };
 
-  // Helper to create release handler (set button to false)
+  // Helper to create release handler (set button to false) - disabled if hardware connected
   const createButtonReleaseHandler = (buttonKey: keyof GamepadState) => () => {
+    if (anyHardwareConnected) return;
     const currentValue = gamepadState[buttonKey];
     const newValue = typeof currentValue === 'number' ? 0 : false;
     updateGamepadState(gamepadNum, { [buttonKey]: newValue });
   };
 
+  // Wrapper for slider onChange - disabled if hardware connected
+  const handleSliderChange = (key: keyof GamepadState) => (value: number) => {
+    if (anyHardwareConnected) return;
+    updateGamepadState(gamepadNum, { [key]: value });
+  };
+
+  // Wrapper for stick movement - disabled if hardware connected
+  const handleStickMove = (xKey: keyof GamepadState, yKey: keyof GamepadState) => (x: number, y: number) => {
+    if (anyHardwareConnected) return;
+    updateGamepadState(gamepadNum, { [xKey]: x, [yKey]: y });
+  };
+
+  // Wrapper for stick reset - disabled if hardware connected
+  const handleStickReset = (xKey: keyof GamepadState, yKey: keyof GamepadState) => () => {
+    if (anyHardwareConnected) return;
+    updateGamepadState(gamepadNum, { [xKey]: 0, [yKey]: 0 });
+  };
+
   return (
-    <div className="space-y-3">
+    <div className={clsx('space-y-3', anyHardwareConnected && 'opacity-60 pointer-events-none')}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -84,7 +106,7 @@ export const GamepadControls: React.FC<GamepadControlsProps> = ({
               label="LT"
               value={gamepadState.left_trigger}
               keyBinding={showKeyBindings ? formatKeyName(keyboardMapping.left_trigger || '') : ''}
-              onChange={(value) => updateGamepadState(gamepadNum, { left_trigger: value })}
+              onChange={handleSliderChange('left_trigger')}
             />
           </div>
           <div className="flex-1 flex flex-col gap-2">
@@ -100,7 +122,7 @@ export const GamepadControls: React.FC<GamepadControlsProps> = ({
               label="RT"
               value={gamepadState.right_trigger}
               keyBinding={showKeyBindings ? formatKeyName(keyboardMapping.right_trigger || '') : ''}
-              onChange={(value) => updateGamepadState(gamepadNum, { right_trigger: value })}
+              onChange={handleSliderChange('right_trigger')}
             />
           </div>
         </div>
@@ -121,8 +143,8 @@ export const GamepadControls: React.FC<GamepadControlsProps> = ({
               onStickButtonClick={createButtonToggleHandler(gamepadNum, 'left_stick_button')}
               onStickButtonPress={createButtonPressHandler('left_stick_button')}
               onStickButtonRelease={createButtonReleaseHandler('left_stick_button')}
-              onStickMove={(x, y) => updateGamepadState(gamepadNum, { left_stick_x: x, left_stick_y: y })}
-              onStickReset={() => updateGamepadState(gamepadNum, { left_stick_x: 0, left_stick_y: 0 })}
+              onStickMove={handleStickMove('left_stick_x', 'left_stick_y')}
+              onStickReset={handleStickReset('left_stick_x', 'left_stick_y')}
             />
             
             {/* D-Pad */}
@@ -255,8 +277,8 @@ export const GamepadControls: React.FC<GamepadControlsProps> = ({
               onStickButtonClick={createButtonToggleHandler(gamepadNum, 'right_stick_button')}
               onStickButtonPress={createButtonPressHandler('right_stick_button')}
               onStickButtonRelease={createButtonReleaseHandler('right_stick_button')}
-              onStickMove={(x, y) => updateGamepadState(gamepadNum, { right_stick_x: x, right_stick_y: y })}
-              onStickReset={() => updateGamepadState(gamepadNum, { right_stick_x: 0, right_stick_y: 0 })}
+              onStickMove={handleStickMove('right_stick_x', 'right_stick_y')}
+              onStickReset={handleStickReset('right_stick_x', 'right_stick_y')}
             />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 
 interface GamepadStickProps {
@@ -43,7 +43,18 @@ export const GamepadStick: React.FC<GamepadStickProps> = ({
 }) => {
   const [isLocked, setIsLocked] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const stickRef = React.useRef<HTMLDivElement>(null);
+  const stickRef = useRef<HTMLDivElement>(null);
+  const lastPressedRef = useRef(isPressed);
+  const userInteractingRef = useRef(false);
+  
+  // Detect external changes (e.g., from keyboard) and clear lock
+  useEffect(() => {
+    // If isPressed changed and we're not in the middle of user interaction, clear lock
+    if (isPressed !== lastPressedRef.current && !userInteractingRef.current) {
+      setIsLocked(false);
+    }
+    lastPressedRef.current = isPressed;
+  }, [isPressed]);
   
   const normalizedX = 50 + (x * 40);
   const normalizedY = 50 - (y * 40);
@@ -118,12 +129,14 @@ export const GamepadStick: React.FC<GamepadStickProps> = ({
   // Stick button handlers (similar to GamepadButton)
   const handleStickButtonMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    userInteractingRef.current = true;
     if (isLocked) {
       // Single click unlocks
       setIsLocked(false);
       if (onStickButtonRelease) {
         onStickButtonRelease();
       }
+      userInteractingRef.current = false;
       return;
     }
     if (onStickButtonPress) {
@@ -136,21 +149,26 @@ export const GamepadStick: React.FC<GamepadStickProps> = ({
     if (!isLocked && onStickButtonRelease) {
       onStickButtonRelease();
     }
+    userInteractingRef.current = false;
   };
 
   const handleStickButtonDoubleClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    userInteractingRef.current = true;
     // Double-click locks the button
     setIsLocked(true);
     if (onStickButtonClick) {
       onStickButtonClick();
     }
+    // Keep flag set to prevent unlock until next state change
+    setTimeout(() => { userInteractingRef.current = false; }, 0);
   };
 
   const handleStickButtonMouseLeave = () => {
     if (!isLocked && onStickButtonRelease) {
       onStickButtonRelease();
     }
+    userInteractingRef.current = false;
   };
   
   return (

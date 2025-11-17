@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import clsx from 'clsx';
 
 interface GamepadButtonProps {
@@ -23,18 +23,31 @@ export const GamepadButton: React.FC<GamepadButtonProps> = ({
   onToggle
 }) => {
   const [isLocked, setIsLocked] = useState(false);
+  const lastActiveRef = useRef(isActive);
+  const userInteractingRef = useRef(false);
+  
+  // Detect external changes (e.g., from keyboard) and clear lock
+  useEffect(() => {
+    // If isActive changed and we're not in the middle of user interaction, clear lock
+    if (isActive !== lastActiveRef.current && !userInteractingRef.current) {
+      setIsLocked(false);
+    }
+    lastActiveRef.current = isActive;
+  }, [isActive]);
   
   const isAnalog = value !== undefined;
   const displayValue = isAnalog ? (value * 100).toFixed(0) + '%' : label;
   
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    userInteractingRef.current = true;
     if (isLocked) {
       // Single click unlocks
       setIsLocked(false);
       if (onRelease) {
         onRelease();
       }
+      userInteractingRef.current = false;
       return;
     }
     if (onPress) {
@@ -47,21 +60,26 @@ export const GamepadButton: React.FC<GamepadButtonProps> = ({
     if (!isLocked && onRelease) {
       onRelease();
     }
+    userInteractingRef.current = false;
   };
   
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    userInteractingRef.current = true;
     // Double-click locks the button
     setIsLocked(true);
     if (onToggle) {
       onToggle();
     }
+    // Keep flag set to prevent unlock until next state change
+    setTimeout(() => { userInteractingRef.current = false; }, 0);
   };
   
   const handleMouseLeave = () => {
     if (!isLocked && onRelease) {
       onRelease();
     }
+    userInteractingRef.current = false;
   };
   
   return (
