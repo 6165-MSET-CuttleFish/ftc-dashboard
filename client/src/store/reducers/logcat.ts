@@ -80,7 +80,7 @@ const logcatReducer = (
       
       return {
         ...state,
-        errors: groupedErrors.slice(-1000), // Keep only last 1000 errors
+        errors: groupedErrors.slice(-100), // Keep only last 100 errors
       };
     case CLEAR_LOGCAT_ERRORS:
       return {
