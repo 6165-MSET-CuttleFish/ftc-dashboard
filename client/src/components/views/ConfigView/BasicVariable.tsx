@@ -70,7 +70,6 @@ class BasicVariable extends React.Component<Props> {
               validate={validateInt}
               onChange={onChange}
               showArrows={true}
-              step={1}
               onSave={onSave}
             />
           );
@@ -94,7 +93,6 @@ class BasicVariable extends React.Component<Props> {
                   validate={validateDouble}
                   onChange={onChange}
                   showArrows={true}
-                  step={0.1}
                   onSave={onSave}
                 />
                 {state.__valid && (
