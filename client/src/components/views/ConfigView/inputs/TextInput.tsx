@@ -1,6 +1,6 @@
 import React from 'react';
 import clsx from 'clsx';
-import { ValResult } from '@/components/inputs/validation';
+import { ValResult, validateDouble } from '@/components/inputs/validation';
 
 interface Props<T> {
   id?: string;
@@ -11,6 +11,18 @@ interface Props<T> {
   onSave?: () => void;
   showArrows?: boolean;
   readOnly?: boolean;
+}
+
+function countDecimalPlaces(str: string) {
+  if (!validateDouble(str).valid) {
+    return 0;
+  }
+
+  const parts = str.trim().split('.');
+  if (parts.length <= 1) {
+    return 0;
+  }
+  return parts[1].length;
 }
 
 const TextInput = <T,>({
@@ -32,38 +44,27 @@ const TextInput = <T,>({
   }, [valid]);
 
   React.useEffect(() => {
-    if (value !== validate(inputValue).value) {
+    const validated = validate(inputValue);
+    if (validated.valid && value !== validated.value) {
       setInputValue(`${value}`);
     }
   }, [value, validate, inputValue]);
 
+
   const handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(evt.target.value);
-    const validated = validate(evt.target.value);
-    if (validated) {
-      onChange(validated);
-    }
+    const { inputType } = evt.nativeEvent as InputEvent;
+    // Firefox uses insertReplacementText for the arrows while Chrome uses undefined.
+    const fromArrows = showArrows && (inputType === "insertReplacementText" || inputType === undefined);
+    setInputValue(fromArrows ? Number(evt.target.value).toFixed(countDecimalPlaces(inputValue)) : evt.target.value);
+    onChange(validate(evt.target.value));
   };
 
   const handleKeyDown = (evt: React.KeyboardEvent<HTMLInputElement>) => {
     if (onSave && evt.keyCode === 13) onSave();
   };
 
-  // Calculate dynamic step based on the current value's precision
-  const calculateStep = () => {
-    if (!showArrows) return undefined;
-    
-    const raw = inputValue.trim();
-    if (raw.includes('.')) {
-      const decimalPart = raw.split('.')[1] || '';
-      const precision = decimalPart.length || 1;
-      return Math.pow(10, -precision);
-    }
-    return 1;
-  };
-
-  const inputType = showArrows ? 'number' : 'text';
-  const dynamicStep = calculateStep();
+  const decimalPlaces = countDecimalPlaces(inputValue);
+  const step = decimalPlaces == 0 ? "1.0" : `0.${'0'.repeat(decimalPlaces - 1)}1`;
 
   return (
     <input
@@ -74,13 +75,13 @@ const TextInput = <T,>({
         !valid && 'border-red-500 focus:border-red-500 focus:ring-red-500',
       )}
       ref={inputRef}
-      type={inputType}
+      type={showArrows ? 'number' : 'text'}
       size={15}
       value={inputValue}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
       readOnly={readOnly}
-      {...(showArrows && dynamicStep !== undefined && { step: dynamicStep })}
+      step={showArrows ? step : undefined}
     />
   );
 };
