@@ -12,6 +12,7 @@ import { ReactComponent as WidgetIcon } from '@/assets/icons/widgets.svg';
 import { ReactComponent as ListIcon } from '@/assets/icons/list.svg';
 import { ReactComponent as HardwareIcon } from '@/assets/icons/hardware.svg';
 import { ReactComponent as DeleteSweepIcon } from '@/assets/icons/delete_sweep.svg';
+import { ReactComponent as ExclamationIcon } from '@/assets/icons/exclamation.svg';
 
 type ViewPickerProps = {
   isOpen: boolean;
@@ -140,7 +141,7 @@ const listContent = [
   {
     title: 'Error View',
     view: ConfigurableView.ERROR_VIEW,
-    icon: <DeleteSweepIcon className="h-5 w-5 text-white" />,
+    icon: <ExclamationIcon className="h-5 w-5 text-white" />,
     customStyles: 'focus:ring-red-600',
     iconBg: 'bg-red-500',
   },
