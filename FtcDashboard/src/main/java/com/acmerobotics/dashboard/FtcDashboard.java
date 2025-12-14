@@ -17,6 +17,7 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.config.ValueProvider;
 import com.acmerobotics.dashboard.config.reflection.ReflectionConfig;
 import com.acmerobotics.dashboard.config.variable.CustomVariable;
+import com.acmerobotics.dashboard.limelight.LimelightWebHandler;
 import com.acmerobotics.dashboard.OpModeInfo;
 import com.acmerobotics.dashboard.message.Message;
 import com.acmerobotics.dashboard.message.redux.InitOpMode;
@@ -1244,6 +1245,9 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
 
         addAssetWebHandlers(webHandlerManager, assetManager, "images");
 
+        // Register Limelight 3A proxy handlers
+        registerLimelightHandlers(webHandlerManager);
+
         webServerAttached = true;
 
         updateStatusView();
@@ -1661,6 +1665,33 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
 
     private void sendAll(Message message) {
         core.sendAll(message);
+    }
+
+    /**
+     * Register Limelight 3A proxy handlers with the web server.
+     * Creates handlers at /dash/limelight/* that forward to Limelight at 172.29.0.1.
+     */
+    private void registerLimelightHandlers(WebHandlerManager webHandlerManager) {
+        try {
+            // Camera stream endpoint: /dash/limelight/camera
+            // Forwards to Limelight port 5800 (MJPEG stream)
+            webHandlerManager.register("/dash/limelight/camera", 
+                new LimelightWebHandler(5800, true));
+            
+            // Dashboard UI endpoint: /dash/limelight/dashboard
+            // Forwards to Limelight port 5801 (web interface)
+            webHandlerManager.register("/dash/limelight/dashboard", 
+                new LimelightWebHandler(5801, false));
+            
+            // API/Status endpoint: /dash/limelight/api
+            // Forwards to Limelight port 5807 (status and API)
+            webHandlerManager.register("/dash/limelight/api", 
+                new LimelightWebHandler(5807, false));
+            
+            RobotLog.ii(TAG, "Limelight 3A proxy handlers registered at /dash/limelight/*");
+        } catch (Exception e) {
+            RobotLog.ee(TAG, e, "Failed to register Limelight proxy handlers");
+        }
     }
 
     private void close() {
